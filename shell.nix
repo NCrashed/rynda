@@ -9,6 +9,11 @@ stdenv.mkDerivation rec {
     rustup
     alsaLib
     xorg.libX11
+    xorg.libXi
+    xorg.libXinerama
+    xorg.libXext
+    xlibs.libXcursor
+    xlibs.libXrandr
     freetype
     expat
     libxkbcommon
@@ -16,12 +21,14 @@ stdenv.mkDerivation rec {
     openssl
     python3
     libGL
+    glfw
     # vulkan-validation-layers
   ];
 
   APPEND_LIBRARY_PATH = lib.makeLibraryPath [
     # vulkan-loader
     libGL
+    glfw
     xlibs.libXcursor
     xlibs.libXi
     xlibs.libXrandr
