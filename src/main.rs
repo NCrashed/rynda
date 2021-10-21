@@ -1,29 +1,37 @@
+extern crate gl;
 extern crate glfw;
-extern crate gl; 
 
 use gl::types::*;
-use std::ffi::CString;
-use std::mem;
-use std::ptr;
-use std::str;
 use glfw::{Action, Context, Key};
+use std::ffi::CString;
+use std::{io::Cursor, mem, ptr, str};
 
 // Vertex data
-static VERTEX_DATA: [GLfloat; 6] = [0.0, 0.5, 0.5, -0.5, -0.5, -0.5];
+static POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
+static INDEX_DATA: [u16; 4] = [1, 2, 0, 3];
 
 // Shader sources
 static VS_SRC: &'static str = "
 #version 150
 in vec2 position;
+out vec2 tex_coords;
+
+const vec2 madd=vec2(0.5,0.5);
+
 void main() {
     gl_Position = vec4(position, 0.0, 1.0);
-}";
+    tex_coords = position.xy*madd+madd;
+}
+";
 
 static FS_SRC: &'static str = "
 #version 150
-out vec4 out_color;
+uniform sampler2D tex;
+in vec2 tex_coords;
+out vec4 f_color;
+
 void main() {
-    out_color = vec4(1.0, 1.0, 1.0, 1.0);
+    f_color = texture(tex, tex_coords);
 }";
 
 fn compile_shader(src: &str, ty: GLenum) -> GLuint {
@@ -97,12 +105,14 @@ fn link_program(vs: GLuint, fs: GLuint) -> GLuint {
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-
-    let (mut window, events) = glfw.create_window(1024, 1024, "Game of Life", glfw::WindowMode::Windowed)
+    glfw.window_hint(glfw::WindowHint::Resizable(true));
+    let (mut window, events) = glfw
+        .create_window(1024, 1024, "Game of Life", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
     window.make_current();
+    window.set_framebuffer_size_polling(true);
 
     // Load the OpenGL function pointers3
     gl::load_with(|s| window.get_proc_address(s) as *const _);
@@ -112,10 +122,41 @@ fn main() {
     let fs = compile_shader(FS_SRC, gl::FRAGMENT_SHADER);
     let program = link_program(vs, fs);
 
+    // building a texture with "OpenGL" drawn on it
+    let image = image::load(
+        Cursor::new(&include_bytes!("../assets/life.png")[..]),
+        image::ImageFormat::Png,
+    )
+    .unwrap()
+    .to_rgba8();
+    let mut texture_id = 0;
+
     let mut vao = 0;
+    let mut eab = 0;
     let mut vbo = 0;
 
     unsafe {
+        gl::GenTextures(1, &mut texture_id);
+        gl::BindTexture(gl::TEXTURE_2D, texture_id);
+        let image_dimensions = image.dimensions();
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGBA as GLint,
+            image_dimensions.0 as GLint,
+            image_dimensions.1 as GLint,
+            0,
+            gl::BGRA,
+            gl::UNSIGNED_BYTE,
+            mem::transmute(image.as_ptr()),
+        );
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR_MIPMAP_LINEAR as GLint);
+        // ... which requires mipmaps. Generate them automatically.
+        gl::GenerateMipmap(gl::TEXTURE_2D);
+
         // Create Vertex Array Object
         gl::GenVertexArrays(1, &mut vao);
         gl::BindVertexArray(vao);
@@ -125,8 +166,18 @@ fn main() {
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(
             gl::ARRAY_BUFFER,
-            (VERTEX_DATA.len() * mem::size_of::<GLfloat>()) as GLsizeiptr,
-            mem::transmute(&VERTEX_DATA[0]),
+            (POSITION_DATA.len() * mem::size_of::<GLfloat>()) as GLsizeiptr,
+            mem::transmute(&POSITION_DATA[0]),
+            gl::STATIC_DRAW,
+        );
+
+        // Create buffer for indecies and fill data to it
+        gl::GenBuffers(1, &mut eab);
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, eab);
+        gl::BufferData(
+            gl::ELEMENT_ARRAY_BUFFER,
+            (INDEX_DATA.len() * mem::size_of::<GLshort>()) as GLsizeiptr,
+            mem::transmute(&INDEX_DATA[0]),
             gl::STATIC_DRAW,
         );
 
@@ -147,6 +198,14 @@ fn main() {
             0,
             ptr::null(),
         );
+
+        // Bind our texture in Texture Unit 0
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_2D, texture_id);
+        // Set our "texture" sampler to use Texture Unit 0
+        let texture_pos = CString::new("texture").unwrap();
+        let texture_id = gl::GetUniformLocation(program, texture_pos.as_ptr());
+        gl::Uniform1i(texture_id, 0);
     }
 
     while !window.should_close() {
@@ -159,8 +218,14 @@ fn main() {
             // Clear the screen to black
             gl::ClearColor(0.3, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
-            // Draw a triangle from the 3 vertices
-            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+
+            // Draw a quad from the two triangles
+            gl::DrawElements(
+                gl::TRIANGLE_STRIP,
+                INDEX_DATA.len() as GLint,
+                gl::UNSIGNED_SHORT,
+                ptr::null(),
+            );
         }
         window.swap_buffers();
     }
@@ -171,14 +236,17 @@ fn main() {
         gl::DeleteShader(vs);
         gl::DeleteBuffers(1, &vbo);
         gl::DeleteVertexArrays(1, &vao);
+        gl::DeleteBuffers(1, &eab);
+        gl::DeleteTextures(1, &texture_id);
     }
 }
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
     match event {
-        glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-            window.set_should_close(true)
-        }
+        glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => window.set_should_close(true),
+        glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
+            gl::Viewport(0, 0, width, height);
+        },
         _ => {}
     }
 }

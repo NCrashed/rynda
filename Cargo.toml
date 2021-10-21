@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 gl = "0.6.0"
 glfw = "0.42.0"
+image = "0.23.14"

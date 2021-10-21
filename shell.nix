@@ -22,6 +22,7 @@ stdenv.mkDerivation rec {
     python3
     libGL
     glfw
+    renderdoc
     # vulkan-validation-layers
   ];
 
