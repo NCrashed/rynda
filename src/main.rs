@@ -10,6 +10,23 @@ use std::{io::Cursor, mem, ptr, str};
 static POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
 static INDEX_DATA: [u16; 4] = [1, 2, 0, 3];
 
+// Compute shader sources
+static COMPUTE_SRC: &'static str = "
+#version 440 
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout (binding = 0) uniform sampler2D img_input;
+layout(rgba8, binding = 1) uniform image2D img_output;
+
+void main() {
+    ivec2 cell_coord = ivec2(gl_GlobalInvocationID.xy);
+
+    vec4 cell_sample = texelFetch(img_input, cell_coord, 0); 
+
+    imageStore(img_output, cell_coord, cell_sample);
+}
+";
+
 // Shader sources
 static VS_SRC: &'static str = "
 #version 150
@@ -20,13 +37,15 @@ const vec2 madd=vec2(0.5,0.5);
 
 void main() {
     gl_Position = vec4(position, 0.0, 1.0);
-    tex_coords = position.xy*madd+madd;
+    vec2 tex_pos = position.xy;
+    tex_pos.y *= -1;
+    tex_coords = tex_pos.xy*madd+madd;
 }
 ";
 
 static FS_SRC: &'static str = "
-#version 150
-uniform sampler2D tex;
+#version 420
+layout(binding = 1) uniform sampler2D tex;
 in vec2 tex_coords;
 out vec4 f_color;
 
@@ -70,11 +89,12 @@ fn compile_shader(src: &str, ty: GLenum) -> GLuint {
     shader
 }
 
-fn link_program(vs: GLuint, fs: GLuint) -> GLuint {
+fn link_program(shaders: &[GLuint]) -> GLuint {
     unsafe {
         let program = gl::CreateProgram();
-        gl::AttachShader(program, vs);
-        gl::AttachShader(program, fs);
+        for s in shaders {
+            gl::AttachShader(program, *s);
+        }
         gl::LinkProgram(program);
         // Get the link status
         let mut status = gl::FALSE as GLint;
@@ -120,8 +140,9 @@ fn main() {
     // Create GLSL shaders
     let vs = compile_shader(VS_SRC, gl::VERTEX_SHADER);
     let fs = compile_shader(FS_SRC, gl::FRAGMENT_SHADER);
-    let program = link_program(vs, fs);
-
+    let cs = compile_shader(COMPUTE_SRC, gl::COMPUTE_SHADER);
+    let program = link_program(&[vs, fs]);
+    let compute_program = link_program(&[cs]);
     // building a texture with "OpenGL" drawn on it
     let image = image::load(
         Cursor::new(&include_bytes!("../assets/life.png")[..]),
@@ -129,16 +150,19 @@ fn main() {
     )
     .unwrap()
     .to_rgba8();
-    let mut texture_id = 0;
+    let image_dimensions = image.dimensions();
+    let mut input_tex_id = 0;
+    let mut output_tex_id = 0;
 
     let mut vao = 0;
     let mut eab = 0;
     let mut vbo = 0;
 
     unsafe {
-        gl::GenTextures(1, &mut texture_id);
-        gl::BindTexture(gl::TEXTURE_2D, texture_id);
-        let image_dimensions = image.dimensions();
+        // Create input texture
+        gl::GenTextures(1, &mut input_tex_id);
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_2D, input_tex_id);
         gl::TexImage2D(
             gl::TEXTURE_2D,
             0,
@@ -153,8 +177,45 @@ fn main() {
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
         gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::LINEAR_MIPMAP_LINEAR as GLint);
-        // ... which requires mipmaps. Generate them automatically.
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MIN_FILTER,
+            gl::LINEAR_MIPMAP_LINEAR as GLint,
+        );
+        gl::GenerateMipmap(gl::TEXTURE_2D);
+
+        // Create output texture
+        gl::GenTextures(1, &mut output_tex_id);
+        gl::ActiveTexture(gl::TEXTURE0);
+        gl::BindTexture(gl::TEXTURE_2D, output_tex_id);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
+        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as GLint);
+        gl::TexParameteri(
+            gl::TEXTURE_2D,
+            gl::TEXTURE_MIN_FILTER,
+            gl::LINEAR_MIPMAP_LINEAR as GLint,
+        );
+        gl::TexImage2D(
+            gl::TEXTURE_2D,
+            0,
+            gl::RGBA as GLint,
+            image_dimensions.0 as GLint,
+            image_dimensions.1 as GLint,
+            0,
+            gl::RGBA32F,
+            gl::FLOAT,
+            ptr::null(),
+        );
+        gl::BindImageTexture(
+            0,
+            output_tex_id,
+            0,
+            gl::FALSE,
+            0,
+            gl::WRITE_ONLY,
+            gl::RGBA32F,
+        );
         gl::GenerateMipmap(gl::TEXTURE_2D);
 
         // Create Vertex Array Object
@@ -199,13 +260,26 @@ fn main() {
             ptr::null(),
         );
 
-        // Bind our texture in Texture Unit 0
+        // Bind input texture in Texture Unit 0
         gl::ActiveTexture(gl::TEXTURE0);
-        gl::BindTexture(gl::TEXTURE_2D, texture_id);
+        gl::BindTexture(gl::TEXTURE_2D, input_tex_id as GLuint);
+        // Bind output texture in Texture Unit 1
+        gl::ActiveTexture(gl::TEXTURE1);
+        gl::BindTexture(gl::TEXTURE_2D, output_tex_id as GLuint);
+
         // Set our "texture" sampler to use Texture Unit 0
         let texture_pos = CString::new("texture").unwrap();
-        let texture_id = gl::GetUniformLocation(program, texture_pos.as_ptr());
-        gl::Uniform1i(texture_id, 0);
+        let output_tex_id = gl::GetUniformLocation(program, texture_pos.as_ptr());
+        gl::Uniform1i(output_tex_id, 0);
+
+        // Set "img_input" sampler to use Texture Unit 1
+        let img_input = CString::new("img_input").unwrap();
+        let input_tex_id = gl::GetUniformLocation(compute_program, img_input.as_ptr());
+        gl::Uniform1i(input_tex_id, 0);
+        // // Set "img output" sampler to use Texture Unit 1
+        // let img_output = CString::new("img_output").unwrap();
+        // let img_output_id = gl::GetUniformLocation(compute_program, img_output.as_ptr());
+        // gl::Uniform1i(img_output_id, 0);
     }
 
     while !window.should_close() {
@@ -215,6 +289,19 @@ fn main() {
         }
 
         unsafe {
+            // Compute next state of game
+            gl::BindImageTexture(
+                0,
+                output_tex_id,
+                0,
+                gl::FALSE,
+                0,
+                gl::WRITE_ONLY,
+                gl::RGBA32F,
+            );
+            gl::DispatchCompute(image_dimensions.0, image_dimensions.1, 1);
+            gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
+
             // Clear the screen to black
             gl::ClearColor(0.3, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
@@ -226,18 +313,40 @@ fn main() {
                 gl::UNSIGNED_SHORT,
                 ptr::null(),
             );
+
+            // Copy to the next step
+            gl::CopyImageSubData(
+                output_tex_id,
+                gl::TEXTURE_2D,
+                0,
+                0,
+                0,
+                0,
+                input_tex_id,
+                gl::TEXTURE_2D,
+                0,
+                0,
+                0,
+                0,
+                image_dimensions.0 as GLint,
+                image_dimensions.1 as GLint,
+                0,
+            );
         }
         window.swap_buffers();
     }
 
     unsafe {
         gl::DeleteProgram(program);
+        gl::DeleteProgram(compute_program);
         gl::DeleteShader(fs);
         gl::DeleteShader(vs);
+        gl::DeleteShader(cs);
         gl::DeleteBuffers(1, &vbo);
         gl::DeleteVertexArrays(1, &vao);
         gl::DeleteBuffers(1, &eab);
-        gl::DeleteTextures(1, &texture_id);
+        gl::DeleteTextures(1, &input_tex_id);
+        gl::DeleteTextures(1, &output_tex_id);
     }
 }
 
