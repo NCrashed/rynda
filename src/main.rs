@@ -11,7 +11,7 @@ static POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0
 static INDEX_DATA: [u16; 4] = [1, 2, 0, 3];
 
 // Compute shader sources
-static COMPUTE_SRC: &'static str = "
+static COMPUTE_SRC: &str = "
 #version 440 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
@@ -48,7 +48,7 @@ void main() {
 ";
 
 // Shader sources
-static VS_SRC: &'static str = "
+static VS_SRC: &str = "
 #version 150
 in vec2 position;
 out vec2 tex_coords;
@@ -63,7 +63,7 @@ void main() {
 }
 ";
 
-static FS_SRC: &'static str = "
+static FS_SRC: &str = "
 #version 150
 uniform sampler2D img_output;
 in vec2 tex_coords;
@@ -100,9 +100,7 @@ fn compile_shader(src: &str, ty: GLenum) -> GLuint {
             );
             panic!(
                 "{}",
-                str::from_utf8(&buf)
-                    .ok()
-                    .expect("ShaderInfoLog not valid utf8")
+                str::from_utf8(&buf).expect("ShaderInfoLog not valid utf8")
             );
         }
     }
@@ -134,13 +132,48 @@ fn link_program(shaders: &[GLuint]) -> GLuint {
             );
             panic!(
                 "{}",
-                str::from_utf8(&buf)
-                    .ok()
-                    .expect("ProgramInfoLog not valid utf8")
+                str::from_utf8(&buf).expect("ProgramInfoLog not valid utf8")
             );
         }
         program
     }
+}
+
+unsafe fn create_texture(
+    unit: GLenum,
+    width: u32,
+    height: u32,
+    image: Option<&image::RgbaImage>,
+) -> GLuint {
+    let mut tex_id = 0;
+    gl::GenTextures(1, &mut tex_id);
+    gl::ActiveTexture(unit);
+    gl::BindTexture(gl::TEXTURE_2D, tex_id);
+    let datum = match image {
+        None => ptr::null(),
+        Some(i) => mem::transmute(i.as_ptr()),
+    };
+    gl::TexImage2D(
+        gl::TEXTURE_2D,
+        0,
+        gl::RGBA as GLint,
+        width as GLint,
+        height as GLint,
+        0,
+        gl::BGRA,
+        gl::UNSIGNED_BYTE,
+        datum,
+    );
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
+    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
+    gl::TexParameteri(
+        gl::TEXTURE_2D,
+        gl::TEXTURE_MIN_FILTER,
+        gl::NEAREST_MIPMAP_NEAREST as GLint,
+    );
+    gl::GenerateMipmap(gl::TEXTURE_2D);
+    tex_id
 }
 
 fn main() {
@@ -151,8 +184,8 @@ fn main() {
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
-    window.make_current();
     window.set_framebuffer_size_polling(true);
+    window.make_current();
 
     // Load the OpenGL function pointers3
     gl::load_with(|s| window.get_proc_address(s) as *const _);
@@ -171,8 +204,8 @@ fn main() {
     .unwrap()
     .to_rgba8();
     let image_dimensions = image.dimensions();
-    let mut input_tex_id = 0;
-    let mut output_tex_id = 0;
+    let input_tex_id;
+    let output_tex_id;
 
     let mut vao = 0;
     let mut eab = 0;
@@ -180,62 +213,13 @@ fn main() {
 
     unsafe {
         // Create input texture
-        gl::GenTextures(1, &mut input_tex_id);
-        gl::ActiveTexture(gl::TEXTURE0);
-        gl::BindTexture(gl::TEXTURE_2D, input_tex_id);
-        gl::TexImage2D(
-            gl::TEXTURE_2D,
-            0,
-            gl::RGBA as GLint,
-            image_dimensions.0 as GLint,
-            image_dimensions.1 as GLint,
-            0,
-            gl::BGRA,
-            gl::UNSIGNED_BYTE,
-            mem::transmute(image.as_ptr()),
+        input_tex_id = create_texture(
+            gl::TEXTURE0,
+            image_dimensions.0,
+            image_dimensions.1,
+            Some(&image),
         );
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
-        gl::TexParameteri(
-            gl::TEXTURE_2D,
-            gl::TEXTURE_MIN_FILTER,
-            gl::NEAREST_MIPMAP_NEAREST as GLint,
-        );
-        gl::GenerateMipmap(gl::TEXTURE_2D);
-
-        // Create output texture
-        gl::GenTextures(1, &mut output_tex_id);
-        gl::ActiveTexture(gl::TEXTURE1);
-        gl::BindTexture(gl::TEXTURE_2D, output_tex_id);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
-        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
-        gl::TexParameteri(
-            gl::TEXTURE_2D,
-            gl::TEXTURE_MIN_FILTER,
-            gl::NEAREST_MIPMAP_NEAREST as GLint,
-        );
-        gl::TexImage2D(
-            gl::TEXTURE_2D,
-            0,
-            gl::RGBA as GLint,
-            image_dimensions.0 as GLint,
-            image_dimensions.1 as GLint,
-            0,
-            gl::RGBA,
-            gl::FLOAT,
-            ptr::null(),
-        );
-        gl::BindImageTexture(
-            1,
-            output_tex_id,
-            0,
-            gl::FALSE,
-            0,
-            gl::WRITE_ONLY,
-            gl::RGBA,
-        );
+        output_tex_id = create_texture(gl::TEXTURE1, image_dimensions.0, image_dimensions.1, None);
 
         // Create Vertex Array Object
         gl::GenVertexArrays(1, &mut vao);
@@ -263,8 +247,6 @@ fn main() {
 
         // Use shader program
         gl::UseProgram(program);
-        let out_color = CString::new("out_color").unwrap();
-        gl::BindFragDataLocation(program, 0, out_color.as_ptr());
 
         // Specify the layout of the vertex data
         let position = CString::new("position").unwrap();
@@ -291,14 +273,10 @@ fn main() {
         let output_tex_id = gl::GetUniformLocation(program, img_output.as_ptr());
         gl::Uniform1i(output_tex_id, 1);
 
-        // Set "img_input" sampler to use Texture Unit 1
+        // Set "img_input" sampler to use Texture Unit 0
         let img_input = CString::new("img_input").unwrap();
         let input_tex_id = gl::GetUniformLocation(compute_program, img_input.as_ptr());
         gl::Uniform1i(input_tex_id, 0);
-        // Set "img output" sampler to use Texture Unit 1
-        // let img_output = CString::new("img_output").unwrap();
-        // let img_output_id = gl::GetUniformLocation(compute_program, img_output.as_ptr());
-        // gl::Uniform1i(img_output_id, 1);
     }
 
     while !window.should_close() {
@@ -312,7 +290,7 @@ fn main() {
             gl::UseProgram(compute_program);
             gl::BindImageTexture(
                 1,
-                output_tex_id,
+                output_tex_id as GLuint,
                 0,
                 gl::FALSE,
                 0,

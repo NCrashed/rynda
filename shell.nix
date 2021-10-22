@@ -22,17 +22,11 @@ stdenv.mkDerivation rec {
     python3
     libGL
     glfw
-    renderdoc
-    # vulkan-validation-layers
+    # renderdoc # for debugging
   ];
 
   APPEND_LIBRARY_PATH = lib.makeLibraryPath [
-    # vulkan-loader
     libGL
-    glfw
-    xlibs.libXcursor
-    xlibs.libXi
-    xlibs.libXrandr
   ];
 
   shellHook = ''
