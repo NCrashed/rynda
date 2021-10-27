@@ -19,6 +19,7 @@ pub struct RleVolume {
 }
 
 #[repr(packed(8))]
+/// Describes head of Y column of voxels in pointers map.
 pub struct PointerColumn {
     /// Offset in columns array in bytes
     pub pointer: u32, 
@@ -32,6 +33,7 @@ pub struct PointerColumn {
 
 #[repr(packed(2))]
 #[bitfield]
+/// Single run length encoded range of voxels. First, skip "empty" voxels and then draw N voxels from the buffer.
 pub struct RleRange {
     /// How many voxels are not drawn in the Y column
     pub skipped: B10,
