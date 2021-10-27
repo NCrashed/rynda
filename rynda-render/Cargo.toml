@@ -1,0 +1,23 @@
+[package]
+name = "rynda-render"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-only"
+include = ["LICENSE"]
+authors = ["Anton Gushcha <ncrashed@protonmail.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "rynda_render"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rynda-render-test"
+path = "src/main.rs"
+
+[dependencies]
+gl = "0.6.0"
+glfw = "0.42.0"
+image = "0.23.14"
+rynda-format = { path = "../rynda-format" }
