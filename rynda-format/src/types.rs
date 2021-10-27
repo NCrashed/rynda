@@ -10,6 +10,8 @@ pub struct RleVolume {
     pub height: u32,
     /// Contains width*height elements that defines begining of RLE columns of voxel.
     pub pointers: *mut PointerColumn,
+    /// Size of columns buffer in bytes, used for fast copying the volume.
+    pub columns_size: u32, 
     /// Raw buffer that consists of repeated pattern: 
     /// - (rle_count-1)*`RleRange`, where rle_count is taken from first_range in corresponding `PointerColumn`
     /// - N*`RgbVoxel`, where N is calculated of summ of drawn voxels from all `RleRanges` in the column. 
