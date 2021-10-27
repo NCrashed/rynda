@@ -180,7 +180,7 @@ fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::Resizable(true));
     let (mut window, events) = glfw
-        .create_window(1024, 1024, "Game of Life", glfw::WindowMode::Windowed)
+        .create_window(1024, 1024, "Rynda pointmap test", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
@@ -197,13 +197,13 @@ fn main() {
     let program = link_program(&[vs, fs]);
     let compute_program = link_program(&[cs]);
     // building a texture with "OpenGL" drawn on it
-    let image = image::load(
-        Cursor::new(&include_bytes!("../assets/life.png")[..]),
-        image::ImageFormat::Png,
-    )
-    .unwrap()
-    .to_rgba8();
-    let image_dimensions = image.dimensions();
+    // let image = image::load(
+    //     Cursor::new(&include_bytes!("../assets/life.png")[..]),
+    //     image::ImageFormat::Png,
+    // )
+    // .unwrap()
+    // .to_rgba8();
+    let image_dimensions = (1024, 1024); // image.dimensions();
     let input_tex_id;
     let output_tex_id;
 
@@ -213,12 +213,13 @@ fn main() {
 
     unsafe {
         // Create input texture
-        input_tex_id = create_texture(
-            gl::TEXTURE0,
-            image_dimensions.0,
-            image_dimensions.1,
-            Some(&image),
-        );
+        // input_tex_id = create_texture(
+        //     gl::TEXTURE0,
+        //     image_dimensions.0,
+        //     image_dimensions.1,
+        //     Some(&image),
+        // );
+        input_tex_id = create_texture(gl::TEXTURE0, image_dimensions.0, image_dimensions.1, None);
         output_tex_id = create_texture(gl::TEXTURE1, image_dimensions.0, image_dimensions.1, None);
 
         // Create Vertex Array Object

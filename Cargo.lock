@@ -135,15 +135,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e78d4f1cc4ae33bbfc157ed5d5a5ef3bc29227303d595861deb238fcec4e9457"
 
 [[package]]
-name = "game-of-life"
-version = "0.1.0"
-dependencies = [
- "gl",
- "glfw",
- "image",
-]
-
-[[package]]
 name = "gif"
 version = "0.11.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -410,6 +401,15 @@ dependencies = [
  "crossbeam-utils",
  "lazy_static",
  "num_cpus",
+]
+
+[[package]]
+name = "rynda"
+version = "0.1.0"
+dependencies = [
+ "gl",
+ "glfw",
+ "image",
 ]
 
 [[package]]
