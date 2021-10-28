@@ -87,28 +87,28 @@ fn main() {
     }
 }
 
-const MOUSE_ROTATION_SPEED: f64 = 0.001; 
-const CAMERA_MOVE_SPEED: f64 = 0.1; 
+const MOUSE_ROTATION_SPEED: f64 = 0.001;
+const CAMERA_MOVE_SPEED: f64 = 0.1;
 
 struct EventContext {
-    pub mode: u32, 
-    pub old_cx: f64, 
+    pub mode: u32,
+    pub old_cx: f64,
     pub old_cy: f64,
-    pub left: bool, 
-    pub right: bool, 
-    pub up: bool, 
+    pub left: bool,
+    pub right: bool,
+    pub up: bool,
     pub down: bool,
 }
 
 impl Default for EventContext {
     fn default() -> Self {
         EventContext {
-            mode: 0, 
-            old_cx: 0., 
+            mode: 0,
+            old_cx: 0.,
             old_cy: 0.,
-            left: false, 
-            right: false, 
-            up: false, 
+            left: false,
+            right: false,
+            up: false,
             down: false,
         }
     }
