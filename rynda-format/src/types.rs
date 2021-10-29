@@ -6,11 +6,14 @@ use std::ptr;
 /// Run length encoded volume of voxels that consists of two parts. Flat pointers map
 /// and columns buffer itself.
 pub struct RleVolume {
-    /// Width of volume by X axis. Number of columns in X axis of pointers buffer.
-    pub width: u32,
-    /// Height of volume by Z axis. Number of columns in Z axis of pointers buffer.
-    pub height: u32,
-    /// Contains width*height elements that defines begining of RLE columns of voxel.
+    /// Size of volume by X axis. Number of columns in X axis of pointers buffer.
+    pub xsize: u32,
+    /// Size of volume by Y axis. Maximum height of XZ columns.
+    pub ysize: u32,
+    /// Size of volume by Z axis. Number of columns in Z axis of pointers buffer.
+    pub zsize: u32,
+    
+    /// Contains xsize*zsize elements that defines begining of RLE columns of voxel.
     pub pointers: *mut PointerColumn,
     /// Size of columns buffer in bytes, used for fast copying the volume.
     pub columns_size: u32,
@@ -79,8 +82,9 @@ impl RleVolume {
         }
 
         RleVolume {
-            width: xsize,
-            height: zsize,
+            xsize,
+            ysize,
+            zsize,
             pointers, 
             columns_size: 0, 
             columns: ptr::null::<u8>() as *mut u8, 
