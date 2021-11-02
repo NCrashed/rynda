@@ -82,11 +82,12 @@ impl RleColumn {
 
     /// Return first range and rest column without that range but with it color data
     pub fn split_head(mut self) -> Option<(RleRange, Self)> {
-        let mfirst = self.ranges.drain(0..1).next();
-        match mfirst {
-            None => None,
-            Some(first) => Some((first, self)),
+        if self.ranges.len() == 0 {
+            return None;
         }
+
+        let first = self.ranges.drain(0..1).next().unwrap();
+        Some((first, self))
     }
 
     /// Return count of RLE intervals in that column

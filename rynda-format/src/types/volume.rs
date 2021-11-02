@@ -110,7 +110,7 @@ impl From<Array3<RgbVoxel>> for RleVolume {
                     .remove_axis(Axis(2))
                     .remove_axis(Axis(0));
                 let rle_col = RleColumn::compress(column.as_slice().unwrap());
-                let (first_range, rest_column) = rle_col.split_head();
+                let (first_range, rest_column) = rle_col.split_head().unwrap();
                 let point = pointers.offset(i as isize);
                 let rle_count = rest_column.intervals_count();
                 assert!(
