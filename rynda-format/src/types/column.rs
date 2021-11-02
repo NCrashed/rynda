@@ -58,10 +58,10 @@ impl RleColumn {
         let mut col_offset = 0;
 
         for range in self.ranges.iter() {
-            for _ in 0 .. range.skipped() {
+            for _ in 0..range.skipped() {
                 voxels.push(RgbVoxel::empty());
             }
-            for _ in 0 .. range.drawn() {
+            for _ in 0..range.drawn() {
                 voxels.push(self.colors[col_offset]);
                 col_offset += 1;
             }
@@ -81,8 +81,12 @@ impl RleColumn {
     }
 
     /// Return first range and rest column without that range but with it color data
-    pub fn split_head(self) -> (RleRange, Self) {
-        unimplemented!()
+    pub fn split_head(mut self) -> Option<(RleRange, Self)> {
+        let mfirst = self.ranges.drain(0..1).next();
+        match mfirst {
+            None => None,
+            Some(first) => Some((first, self)),
+        }
     }
 
     /// Return count of RLE intervals in that column
@@ -189,7 +193,8 @@ mod tests {
             RleColumn {
                 ranges: vec![],
                 colors: vec![],
-            }.decompress(),
+            }
+            .decompress(),
             vec![],
             "Decompression of empty column"
         );
@@ -198,7 +203,8 @@ mod tests {
             RleColumn {
                 ranges: vec![RleRange::range(1, 0)],
                 colors: vec![],
-            }.decompress(),
+            }
+            .decompress(),
             vec![RgbVoxel::empty()],
             "Decompression of single empty voxel"
         );
@@ -207,7 +213,8 @@ mod tests {
             RleColumn {
                 ranges: vec![RleRange::range(5, 0)],
                 colors: vec![],
-            }.decompress(),
+            }
+            .decompress(),
             vec![RgbVoxel::empty(); 5],
             "Decompression of empty column"
         );
@@ -215,7 +222,8 @@ mod tests {
             RleColumn {
                 ranges: vec![RleRange::range(2, 1)],
                 colors: vec![RgbVoxel::only_red(1)],
-            }.decompress(),
+            }
+            .decompress(),
             vec![RgbVoxel::empty(), RgbVoxel::empty(), RgbVoxel::only_red(1)],
             "Decompression of simple column"
         );
@@ -224,7 +232,8 @@ mod tests {
             RleColumn {
                 ranges: vec![RleRange::range(0, 2)],
                 colors: vec![RgbVoxel::only_red(1), RgbVoxel::only_green(1)],
-            }.decompress(),
+            }
+            .decompress(),
             vec![RgbVoxel::only_red(1), RgbVoxel::only_green(1)],
             "Decompression of two non empty voxels"
         );
@@ -233,7 +242,8 @@ mod tests {
             RleColumn {
                 ranges: vec![RleRange::range(0, 63), RleRange::range(0, 1)],
                 colors: vec![RgbVoxel::only_red(1); 64],
-            }.decompress(),
+            }
+            .decompress(),
             vec![RgbVoxel::only_red(1); 64],
             "Decompression of column with drawn overflow"
         );
@@ -242,7 +252,8 @@ mod tests {
             RleColumn {
                 ranges: vec![RleRange::range(1023, 0), RleRange::range(1, 0)],
                 colors: vec![],
-            }.decompress(),
+            }
+            .decompress(),
             vec![RgbVoxel::empty(); 1024],
             "Decompression of column with skipped overflow"
         );
@@ -251,7 +262,8 @@ mod tests {
             RleColumn {
                 ranges: vec![RleRange::range(1, 1), RleRange::range(1, 1)],
                 colors: vec![RgbVoxel::only_red(1), RgbVoxel::only_blue(1)],
-            }.decompress(),
+            }
+            .decompress(),
             vec![
                 RgbVoxel::empty(),
                 RgbVoxel::only_red(1),
@@ -265,9 +277,35 @@ mod tests {
             RleColumn {
                 ranges: vec![RleRange::range(1, 1), RleRange::range(1, 0)],
                 colors: vec![RgbVoxel::only_red(1)],
-            }.decompress(),
+            }
+            .decompress(),
             vec![RgbVoxel::empty(), RgbVoxel::only_red(1), RgbVoxel::empty()],
             "Decompression of column with two ranges, second empty"
+        );
+    }
+
+    #[test]
+    fn split_head_test() {
+        assert_eq!(
+            RleColumn::compress(&[]).split_head(),
+            None,
+            "Splitting empty column produces non empty result"
+        );
+        assert_eq!(
+            RleColumn::compress(&[RgbVoxel::empty()]).split_head(),
+            Some((RleRange::range(1, 0), RleColumn {
+                ranges: vec![],
+                colors: vec![]
+            })),
+            "Splitting column with single range produces wrong result"
+        );
+        assert_eq!(
+            RleColumn::compress(&[RgbVoxel::only_red(1), RgbVoxel::empty()]).split_head(),
+            Some((RleRange::range(0, 1), RleColumn {
+                ranges: vec![RleRange::range(1, 0)],
+                colors: vec![RgbVoxel::only_red(1)]
+            })),
+            "Splitting column with two ranges produces wrong result"
         );
     }
 }
