@@ -331,7 +331,44 @@ mod tests {
     }
 
     #[test]
-    fn pack_into_test() {
+    fn pack_into_test_empty() {
+        let column = RleColumn::compress(&[]);
+        let mut buffer = vec![];
+        let size;
+        unsafe {
+            size = column.pack_into(buffer.as_mut_ptr());
+        }
+        assert_eq!(size, buffer.len(), "Packed size is not equal buffer size");
+        assert_eq!(buffer, vec![], "Packing column with no ranges");
+    }
+
+    #[test]
+    fn pack_into_test_simple01() {
+        let column = RleColumn::compress(&[RgbVoxel::empty()]);
+        let mut buffer = vec![0; 2];
+        let size;
+        unsafe {
+            size = column.pack_into(buffer.as_mut_ptr());
+        }
+        assert_eq!(size, buffer.len(), "Packed size is not equal buffer size");
+        assert_eq!(buffer, vec![1, 0], "Packing column with single empty range");
+    }
+
+
+    #[test]
+    fn pack_into_test_simple02() {
+        let column = RleColumn::compress(&[RgbVoxel::only_green(1)]);
+        let mut buffer = vec![0; 4];
+        let size;
+        unsafe {
+            size = column.pack_into(buffer.as_mut_ptr());
+        }
+        assert_eq!(size, buffer.len(), "Packed size is not equal buffer size");
+        assert_eq!(buffer, vec![0, 0b00000100, 0b00100000, 0], "Packing column with single color range");
+    }
+
+    #[test]
+    fn pack_into_test_complex() {
         let column = RleColumn::compress(&[RgbVoxel::only_red(1), RgbVoxel::empty(), RgbVoxel::only_blue(1)]);
         let mut buffer = vec![0; 8];
         let size;
