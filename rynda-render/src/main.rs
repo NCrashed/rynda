@@ -180,7 +180,12 @@ fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::Resizable(true));
     let (mut window, events) = glfw
-        .create_window(1024, 1024, "Rynda pointmap test", glfw::WindowMode::Windowed)
+        .create_window(
+            1024,
+            1024,
+            "Rynda pointmap test",
+            glfw::WindowMode::Windowed,
+        )
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
