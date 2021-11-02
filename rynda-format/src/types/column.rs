@@ -71,8 +71,23 @@ impl RleColumn {
     }
 
     /// Pack the data of the column inside the given memory chunk. It must by at least `memory_size` length. Returns the size written.
-    pub fn pack_into(&self, mem: *mut u8) -> usize {
-        unimplemented!()
+    pub unsafe fn pack_into(&self, mem: *mut u8) -> usize {
+        let mut offset: usize = 0;
+        for range in self.ranges.iter() {
+            let ptr = mem.offset(offset as isize);
+            let range_bytes = range.into_bytes();
+            let range_len = range_bytes.len();
+            ptr.copy_from_nonoverlapping(range_bytes.as_ptr(), range_len);
+            offset += range_len;
+        }
+        for color in self.colors.iter() {
+            let ptr = mem.offset(offset as isize);
+            let color_bytes = color.into_bytes();
+            let color_len = color_bytes.len();
+            ptr.copy_from_nonoverlapping(color_bytes.as_ptr(), color_len);
+            offset += color_len;
+        }
+        offset 
     }
 
     /// Return amount of bytes the column will consume after packing
@@ -316,7 +331,25 @@ mod tests {
     }
 
     #[test]
+    fn pack_into_test() {
+        let column = RleColumn::compress(&[RgbVoxel::only_red(1), RgbVoxel::empty(), RgbVoxel::only_blue(1)]);
+        let mut buffer = vec![0; 8];
+        let size;
+        unsafe {
+            size = column.pack_into(buffer.as_mut_ptr());
+        }
+        assert_eq!(size, buffer.len(), "Packed size is not equal buffer size");
+        assert_eq!(buffer, vec![0, 0b00000100, 1, 0b00000100, 0b00000001, 0, 0, 0b00001000], "Packing column with two ranges");
+    }
+
+    #[test]
     fn memory_size_test() {
         assert_eq!(RleColumn::compress(&[RgbVoxel::empty(), RgbVoxel::only_red(1), RgbVoxel::empty()]).memory_size(), 6);
+
+        let column = RleColumn::compress(&[RgbVoxel::empty(), RgbVoxel::only_red(1), RgbVoxel::empty()]);
+        let mut buffer = vec![0; 1024];
+        unsafe {
+            assert_eq!(column.pack_into(buffer.as_mut_ptr()), column.memory_size());
+        }
     }
 }
