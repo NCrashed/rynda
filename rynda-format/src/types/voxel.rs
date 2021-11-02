@@ -1,6 +1,9 @@
 use modular_bitfield::{specifiers::*, *};
 use std::fmt;
 
+/// Amount of bytes RgbVoxel takes in memory
+pub const RGB_VOXEL_SIZE: usize = 2;
+
 /// 16-bit RGB voxel with 5 bits for red and blue colors and 6 bits for green color. Human eye is considered
 /// more sensitive to green tones. Zero values in all components are considered as an empty voxel.
 #[repr(packed(2))]

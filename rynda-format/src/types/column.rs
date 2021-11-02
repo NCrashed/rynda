@@ -1,4 +1,4 @@
-use super::{range::RleRange, voxel::RgbVoxel};
+use super::{range::{RleRange, RLE_RANGE_SIZE}, voxel::{RgbVoxel, RGB_VOXEL_SIZE}};
 
 /// Describes unpacked run length encoded column that is stored inside buffer in the `RleVolume`.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -77,7 +77,7 @@ impl RleColumn {
 
     /// Return amount of bytes the column will consume after packing
     pub fn memory_size(&self) -> usize {
-        unimplemented!()
+        self.ranges.len() * RLE_RANGE_SIZE + self.colors.len() * RGB_VOXEL_SIZE
     }
 
     /// Return first range and rest column without that range but with it color data
@@ -313,5 +313,10 @@ mod tests {
     #[test]
     fn intervals_count_test() {
         assert_eq!(RleColumn::compress(&[RgbVoxel::empty(), RgbVoxel::only_red(1), RgbVoxel::empty()]).intervals_count(), 2);
+    }
+
+    #[test]
+    fn memory_size_test() {
+        assert_eq!(RleColumn::compress(&[RgbVoxel::empty(), RgbVoxel::only_red(1), RgbVoxel::empty()]).memory_size(), 6);
     }
 }

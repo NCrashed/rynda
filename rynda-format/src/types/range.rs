@@ -1,6 +1,9 @@
 use modular_bitfield::{specifiers::*, *};
 use std::fmt;
 
+/// Amount of bytes `RleRange` takes in packed form
+pub const RLE_RANGE_SIZE: usize = 2;
+
 /// Single run length encoded range of voxels. First, skip "empty" voxels and then draw N voxels from the buffer.
 #[repr(packed(2))]
 #[derive(Clone, Copy)]
