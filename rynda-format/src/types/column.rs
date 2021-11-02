@@ -92,7 +92,7 @@ impl RleColumn {
 
     /// Return count of RLE intervals in that column
     pub fn intervals_count(&self) -> usize {
-        unimplemented!()
+        self.ranges.len()
     }
 }
 
@@ -308,5 +308,10 @@ mod tests {
             })),
             "Splitting column with two ranges produces wrong result"
         );
+    }
+
+    #[test]
+    fn intervals_count_test() {
+        assert_eq!(RleColumn::compress(&[RgbVoxel::empty(), RgbVoxel::only_red(1), RgbVoxel::empty()]).intervals_count(), 2);
     }
 }
