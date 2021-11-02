@@ -54,7 +54,20 @@ impl RleColumn {
 
     /// Convert the column to the raw column array of voxels
     pub fn decompress(&self) -> Vec<RgbVoxel> {
-        unimplemented!()
+        let mut voxels = vec![];
+        let mut col_offset = 0;
+
+        for range in self.ranges.iter() {
+            for _ in 0 .. range.skipped() {
+                voxels.push(RgbVoxel::empty());
+            }
+            for _ in 0 .. range.drawn() {
+                voxels.push(self.colors[col_offset]);
+                col_offset += 1;
+            }
+        }
+
+        voxels
     }
 
     /// Pack the data of the column inside the given memory chunk. It must by at least `memory_size` length. Returns the size written.
@@ -167,6 +180,94 @@ mod tests {
                 colors: vec![RgbVoxel::only_red(1)],
             },
             "Compression of column with two ranges, second empty"
+        );
+    }
+
+    #[test]
+    fn column_decompress_test() {
+        assert_eq!(
+            RleColumn {
+                ranges: vec![],
+                colors: vec![],
+            }.decompress(),
+            vec![],
+            "Decompression of empty column"
+        );
+
+        assert_eq!(
+            RleColumn {
+                ranges: vec![RleRange::range(1, 0)],
+                colors: vec![],
+            }.decompress(),
+            vec![RgbVoxel::empty()],
+            "Decompression of single empty voxel"
+        );
+
+        assert_eq!(
+            RleColumn {
+                ranges: vec![RleRange::range(5, 0)],
+                colors: vec![],
+            }.decompress(),
+            vec![RgbVoxel::empty(); 5],
+            "Decompression of empty column"
+        );
+        assert_eq!(
+            RleColumn {
+                ranges: vec![RleRange::range(2, 1)],
+                colors: vec![RgbVoxel::only_red(1)],
+            }.decompress(),
+            vec![RgbVoxel::empty(), RgbVoxel::empty(), RgbVoxel::only_red(1)],
+            "Decompression of simple column"
+        );
+
+        assert_eq!(
+            RleColumn {
+                ranges: vec![RleRange::range(0, 2)],
+                colors: vec![RgbVoxel::only_red(1), RgbVoxel::only_green(1)],
+            }.decompress(),
+            vec![RgbVoxel::only_red(1), RgbVoxel::only_green(1)],
+            "Decompression of two non empty voxels"
+        );
+
+        assert_eq!(
+            RleColumn {
+                ranges: vec![RleRange::range(0, 63), RleRange::range(0, 1)],
+                colors: vec![RgbVoxel::only_red(1); 64],
+            }.decompress(),
+            vec![RgbVoxel::only_red(1); 64],
+            "Decompression of column with drawn overflow"
+        );
+
+        assert_eq!(
+            RleColumn {
+                ranges: vec![RleRange::range(1023, 0), RleRange::range(1, 0)],
+                colors: vec![],
+            }.decompress(),
+            vec![RgbVoxel::empty(); 1024],
+            "Decompression of column with skipped overflow"
+        );
+
+        assert_eq!(
+            RleColumn {
+                ranges: vec![RleRange::range(1, 1), RleRange::range(1, 1)],
+                colors: vec![RgbVoxel::only_red(1), RgbVoxel::only_blue(1)],
+            }.decompress(),
+            vec![
+                RgbVoxel::empty(),
+                RgbVoxel::only_red(1),
+                RgbVoxel::empty(),
+                RgbVoxel::only_blue(1)
+            ],
+            "Decompression of column with two ranges"
+        );
+
+        assert_eq!(
+            RleColumn {
+                ranges: vec![RleRange::range(1, 1), RleRange::range(1, 0)],
+                colors: vec![RgbVoxel::only_red(1)],
+            }.decompress(),
+            vec![RgbVoxel::empty(), RgbVoxel::only_red(1), RgbVoxel::empty()],
+            "Decompression of column with two ranges, second empty"
         );
     }
 }
