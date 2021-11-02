@@ -10,3 +10,4 @@ authors = ["Anton Gushcha <ncrashed@protonmail.com>"]
 
 [dependencies]
 modular-bitfield = "0.11.2"
+ndarray = "0.15.3"
