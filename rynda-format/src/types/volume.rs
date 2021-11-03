@@ -1,6 +1,6 @@
 use super::{column::RleColumn, pointermap::PointerColumn, range::RleRange, voxel::RgbVoxel};
 use ndarray::{s, Array3, Axis};
-use std::alloc::{alloc, Layout};
+use std::alloc::{alloc, dealloc, Layout};
 use std::ptr;
 
 /// Run length encoded volume of voxels that consists of two parts. Flat pointers map
@@ -24,13 +24,29 @@ pub struct RleVolume {
     pub columns: *mut u8,
 }
 
+impl Drop for RleVolume {
+    fn drop(&mut self) {
+        let num_pointers = (self.xsize * self.zsize) as usize;
+        unsafe {
+            dealloc(
+                self.pointers as *mut u8,
+                Layout::array::<PointerColumn>(num_pointers).unwrap(),
+            );
+            dealloc(
+                self.columns,
+                Layout::array::<u8>(self.columns_size as usize).unwrap(),
+            );
+        }
+    }
+}
+
 impl RleVolume {
     /// Construct volume with no voxels with given size. `ysize` is up direction
     pub fn empty(xsize: usize, ysize: usize, zsize: usize) -> Self {
         // Restrict them to be power of two to allow easy mipmapping
-        assert!(is_power2(xsize), "xsize is not power of two!");
-        assert!(is_power2(ysize), "ysize is not power of two!");
-        assert!(is_power2(zsize), "zsize is not power of two!");
+        assert!(xsize == 0 || is_power2(xsize), "xsize is not power of two!");
+        assert!(ysize == 0 || is_power2(ysize), "ysize is not power of two!");
+        assert!(zsize == 0 || is_power2(zsize), "zsize is not power of two!");
         assert!(
             xsize < 1024,
             "xsize of RleVolume is bigger than or equal to 1024!"
@@ -70,7 +86,7 @@ impl RleVolume {
     }
 }
 
-/// Trick to check whether the number is power of two. Zero is not counted as true.
+/// Trick to check whether the number is power of two. Zero is counted as true.
 fn is_power2(x: usize) -> bool {
     (x != 0) && (x & (x - 1)) == 0
 }
@@ -79,9 +95,9 @@ impl From<Array3<RgbVoxel>> for RleVolume {
     fn from(array: Array3<RgbVoxel>) -> Self {
         let (xsize, ysize, zsize) = array.dim();
         // Restrict them to be power of two to allow easy mipmapping
-        assert!(is_power2(xsize), "xsize is not power of two!");
-        assert!(is_power2(ysize), "ysize is not power of two!");
-        assert!(is_power2(zsize), "zsize is not power of two!");
+        assert!(xsize == 0 || is_power2(xsize), "xsize is not power of two!");
+        assert!(ysize == 0 || is_power2(ysize), "ysize is not power of two!");
+        assert!(zsize == 0 || is_power2(zsize), "zsize is not power of two!");
         assert!(
             xsize < 1024,
             "xsize of RleVolume is bigger than or equal to 1024!"
@@ -106,10 +122,11 @@ impl From<Array3<RgbVoxel>> for RleVolume {
                 let x = i % xsize;
                 let z = i / zsize;
                 let column = array
-                    .slice(s![xsize..xsize + 1, .., zsize..zsize + 1])
+                    .slice(s![x .. x+1, .., z .. z+1])
                     .remove_axis(Axis(2))
                     .remove_axis(Axis(0));
-                let rle_col = RleColumn::compress(column.as_slice().unwrap());
+                println!("Column {},{}: {:?}",x, z, column);
+                let rle_col = RleColumn::compress(&column.to_vec());
                 let (first_range, rest_column) = rle_col.split_head().unwrap();
                 let point = pointers.offset(i as isize);
                 let rle_count = rest_column.intervals_count();
@@ -150,9 +167,29 @@ impl From<Array3<RgbVoxel>> for RleVolume {
     }
 }
 
+impl Into<Array3<RgbVoxel>> for RleVolume {
+    fn into(self) -> Array3<RgbVoxel> {
+        let mut arr = Array3::zeros((self.xsize as usize, self.ysize as usize, self.zsize as usize));
+
+        unsafe {
+            let num_pointers = (self.xsize * self.zsize) as usize;
+            for i in 0..num_pointers {
+                let x = i % (self.xsize as usize);
+                let z = i / (self.zsize as usize);
+    
+                let pcol = (*self.pointers.offset(i as isize)).clone();
+                let mut col = RleColumn::unpack_from(self.columns.offset(pcol.pointer as isize), pcol.rle_count as usize, Some(pcol.first_range));
+            }
+        }
+
+        arr
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::arr3;
 
     #[test]
     fn empty_volumes() {
@@ -169,25 +206,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn empty_invalid_volume0() {
+    fn empty_zero_volume0() {
         let v = RleVolume::empty(0, 0, 0);
-    }
-    #[test]
-    #[should_panic]
-    fn empty_invalid_volume1() {
         let v = RleVolume::empty(1, 0, 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn empty_invalid_volume2() {
         let v = RleVolume::empty(0, 1, 0);
-    }
-
-    #[test]
-    #[should_panic]
-    fn empty_invalid_volume3() {
         let v = RleVolume::empty(0, 0, 1);
     }
 
@@ -201,5 +223,14 @@ mod tests {
     #[should_panic]
     fn empty_invalid_volume5() {
         let v = RleVolume::empty(1024, 512, 1024);
+    }
+
+    #[test]
+    fn encode_array() {
+        let z = RgbVoxel::empty();
+        let voxels: Array3<RgbVoxel> = arr3(&[[[z, z], [z, z]], [[z, z], [z, z]]]);
+        let volume: RleVolume = voxels.clone().into();
+        let decoded: Array3<RgbVoxel> = volume.into();
+        assert_eq!(decoded, voxels, "Encoding-decoding empty volume 2x2x2");
     }
 }

@@ -3,6 +3,10 @@ use std::fmt;
 
 /// Amount of bytes `RleRange` takes in packed form
 pub const RLE_RANGE_SIZE: usize = 2;
+/// Amount of values skipped field can represent
+pub const RLE_SKIPPED_MAX: usize = 1024;
+/// Amount of values drawn field can represent
+pub const RLE_DRAWN_MAX: usize = 64;
 
 /// Single run length encoded range of voxels. First, skip "empty" voxels and then draw N voxels from the buffer.
 #[repr(packed(2))]

@@ -1,5 +1,7 @@
 use modular_bitfield::{specifiers::*, *};
 use std::fmt;
+use num_traits::identities::Zero;
+use core::ops::Add;
 
 /// Amount of bytes RgbVoxel takes in memory
 pub const RGB_VOXEL_SIZE: usize = 2;
@@ -30,6 +32,24 @@ impl fmt::Debug for RgbVoxel {
             .field("green", &self.green())
             .field("blue", &self.blue())
             .finish()
+    }
+}
+
+impl Add for RgbVoxel {
+    type Output = RgbVoxel;
+
+    fn add(self, other: Self) -> Self {
+        RgbVoxel::rgb(self.red() + other.red(), self.green() + other.green(), self.blue() + other.blue())
+    }
+}
+
+impl Zero for RgbVoxel {
+    fn zero() -> Self {
+        Self::empty()
+    }
+
+    fn is_zero(&self) -> bool {
+        self.is_empty()
     }
 }
 

@@ -2,7 +2,7 @@ use super::range::RleRange;
 
 /// Describes head of Y column of voxels in pointers map.
 #[repr(packed(8))]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PointerColumn {
     /// Offset in columns array in bytes
     pub pointer: u32,
