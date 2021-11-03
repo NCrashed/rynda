@@ -124,8 +124,8 @@ impl From<Array3<RgbVoxel>> for RleVolume {
                 let column = array
                     .slice(s![x .. x+1, .., z .. z+1])
                     .remove_axis(Axis(2))
-                    .remove_axis(Axis(0));
-                println!("Column {},{}: {:?}",x, z, column);
+                    .remove_axis(Axis(0)); 
+                
                 let rle_col = RleColumn::compress(&column.to_vec());
                 let (first_range, rest_column) = rle_col.split_head().unwrap();
                 let point = pointers.offset(i as isize);
