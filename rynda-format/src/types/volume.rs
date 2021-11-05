@@ -122,10 +122,9 @@ impl From<Array3<RgbVoxel>> for RleVolume {
                 let x = i % xsize;
                 let z = i / zsize;
                 let column = array
-                    .slice(s![x .. x+1, .., z .. z+1])
+                    .slice(s![x..x + 1, .., z..z + 1])
                     .remove_axis(Axis(2))
-                    .remove_axis(Axis(0)); 
-                
+                    .remove_axis(Axis(0));
                 let rle_col = RleColumn::compress(&column.to_vec());
                 let (first_range, rest_column) = rle_col.split_head().unwrap();
                 let point = pointers.offset(i as isize);
@@ -143,7 +142,13 @@ impl From<Array3<RgbVoxel>> for RleVolume {
                 };
                 columns.push(rest_column.clone());
                 columns_offset += rest_column.memory_size();
-                println!("Column {},{} {:?}: {}", x, z, RleColumn::compress(&column.to_vec()), columns_offset);
+                println!(
+                    "Column {},{} {:?}: {}",
+                    x,
+                    z,
+                    RleColumn::compress(&column.to_vec()),
+                    columns_offset
+                );
             }
         }
 
@@ -171,16 +176,23 @@ impl From<Array3<RgbVoxel>> for RleVolume {
 
 impl Into<Array3<RgbVoxel>> for RleVolume {
     fn into(self) -> Array3<RgbVoxel> {
-        let mut arr = Array3::zeros((self.xsize as usize, self.ysize as usize, self.zsize as usize));
+        let mut arr = Array3::zeros((
+            self.xsize as usize,
+            self.ysize as usize,
+            self.zsize as usize,
+        ));
 
         unsafe {
             let num_pointers = (self.xsize * self.zsize) as usize;
             for i in 0..num_pointers {
                 let x = i % (self.xsize as usize);
                 let z = i / (self.zsize as usize);
-    
                 let pcol = (*self.pointers.offset(i as isize)).clone();
-                let col = RleColumn::unpack_from(self.columns.offset(pcol.pointer as isize), pcol.rle_count as usize, Some(pcol.first_range));
+                let col = RleColumn::unpack_from(
+                    self.columns.offset(pcol.pointer as isize),
+                    pcol.rle_count as usize,
+                    Some(pcol.first_range),
+                );
                 println!("Decoding {},{}, pcol: {:?}, col: {:?}", x, z, pcol, col);
 
                 for (y, color) in col.decompress().iter().enumerate() {
@@ -236,7 +248,11 @@ mod tests {
         let (x, y, z) = voxels.dim();
         let volume: RleVolume = voxels.clone().into();
         let decoded: Array3<RgbVoxel> = volume.into();
-        assert_eq!(decoded, voxels, "Encoding-decoding {} volume {}x{}x{}", descr, x, y, z);
+        assert_eq!(
+            decoded, voxels,
+            "Encoding-decoding {} volume {}x{}x{}",
+            descr, x, y, z
+        );
     }
 
     #[test]
@@ -252,5 +268,35 @@ mod tests {
         let r = RgbVoxel::only_red(1);
         let voxels: Array3<RgbVoxel> = arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
         encode_decode_array(voxels, "simple");
+    }
+    #[test]
+    fn encode_array_test03() {
+        let r = RgbVoxel::only_red(1);
+        let g = RgbVoxel::only_green(1);
+        let voxels: Array3<RgbVoxel> = arr3(&[[[g, r], [g, r]], [[r, g], [g, r]]]);
+        encode_decode_array(voxels, "filled");
+    }
+
+    #[test]
+    fn encode_array_test04() {
+        let z = RgbVoxel::empty();
+        let r = RgbVoxel::only_red(1);
+        let g = RgbVoxel::only_green(1);
+        let voxels: Array3<RgbVoxel> = arr3(&[[[g, z], [g, r]], [[z, g], [g, r]]]);
+        encode_decode_array(voxels, "partially filled");
+    }
+
+    #[test]
+    fn encode_array_test05() {
+        let z = RgbVoxel::empty();
+        let r = RgbVoxel::only_red(1);
+        let g = RgbVoxel::only_green(1);
+        let voxels: Array3<RgbVoxel> = arr3(&[
+            [[g, z, z, r], [g, r, z, z], [g, r, z, z], [g, r, z, z]],
+            [[z, g, g, z], [g, r, r, g], [g, r, r, g], [g, r, r, g]],
+            [[z, g, g, z], [g, r, r, g], [g, r, r, g], [g, r, r, g]],
+            [[z, g, g, z], [g, r, r, g], [g, r, r, g], [g, r, r, g]],
+        ]);
+        encode_decode_array(voxels, "partially filled");
     }
 }
