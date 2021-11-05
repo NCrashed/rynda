@@ -142,13 +142,6 @@ impl From<Array3<RgbVoxel>> for RleVolume {
                 };
                 columns.push(rest_column.clone());
                 columns_offset += rest_column.memory_size();
-                println!(
-                    "Column {},{} {:?}: {}",
-                    x,
-                    z,
-                    RleColumn::compress(&column.to_vec()),
-                    columns_offset
-                );
             }
         }
 
@@ -193,8 +186,7 @@ impl Into<Array3<RgbVoxel>> for RleVolume {
                     pcol.rle_count as usize,
                     Some(pcol.first_range),
                 );
-                println!("Decoding {},{}, pcol: {:?}, col: {:?}", x, z, pcol, col);
-
+                
                 for (y, color) in col.decompress().iter().enumerate() {
                     arr[(x, y, z)] = color.clone();
                 }
