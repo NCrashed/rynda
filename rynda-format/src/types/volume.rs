@@ -143,18 +143,20 @@ impl From<Array3<RgbVoxel>> for RleVolume {
                 };
                 columns.push(rest_column.clone());
                 columns_offset += rest_column.memory_size();
+                println!("Column {},{} {:?}: {}", x, z, RleColumn::compress(&column.to_vec()), columns_offset);
             }
         }
 
         let columns_array;
+        let mut offset: usize = 0;
         unsafe {
             columns_array = alloc(Layout::array::<u8>(columns_offset).unwrap());
-            let mut offset: usize = 0;
             for c in columns {
                 let start = columns_array.offset(offset as isize);
                 offset += c.pack_into(start);
             }
         }
+        assert_eq!(columns_offset, offset, "Memory sizes should be equal");
 
         RleVolume {
             xsize: xsize as u32,
@@ -178,7 +180,12 @@ impl Into<Array3<RgbVoxel>> for RleVolume {
                 let z = i / (self.zsize as usize);
     
                 let pcol = (*self.pointers.offset(i as isize)).clone();
-                let mut col = RleColumn::unpack_from(self.columns.offset(pcol.pointer as isize), pcol.rle_count as usize, Some(pcol.first_range));
+                let col = RleColumn::unpack_from(self.columns.offset(pcol.pointer as isize), pcol.rle_count as usize, Some(pcol.first_range));
+                println!("Decoding {},{}, pcol: {:?}, col: {:?}", x, z, pcol, col);
+
+                for (y, color) in col.decompress().iter().enumerate() {
+                    arr[(x, y, z)] = color.clone();
+                }
             }
         }
 
@@ -225,12 +232,25 @@ mod tests {
         let v = RleVolume::empty(1024, 512, 1024);
     }
 
-    #[test]
-    fn encode_array() {
-        let z = RgbVoxel::empty();
-        let voxels: Array3<RgbVoxel> = arr3(&[[[z, z], [z, z]], [[z, z], [z, z]]]);
+    fn encode_decode_array(voxels: Array3<RgbVoxel>, descr: &str) {
+        let (x, y, z) = voxels.dim();
         let volume: RleVolume = voxels.clone().into();
         let decoded: Array3<RgbVoxel> = volume.into();
-        assert_eq!(decoded, voxels, "Encoding-decoding empty volume 2x2x2");
+        assert_eq!(decoded, voxels, "Encoding-decoding {} volume {}x{}x{}", descr, x, y, z);
+    }
+
+    #[test]
+    fn encode_array_test01() {
+        let z = RgbVoxel::empty();
+        let voxels: Array3<RgbVoxel> = arr3(&[[[z, z], [z, z]], [[z, z], [z, z]]]);
+        encode_decode_array(voxels, "empty");
+    }
+
+    #[test]
+    fn encode_array_test02() {
+        let z = RgbVoxel::empty();
+        let r = RgbVoxel::only_red(1);
+        let voxels: Array3<RgbVoxel> = arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
+        encode_decode_array(voxels, "simple");
     }
 }
