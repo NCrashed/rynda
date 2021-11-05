@@ -650,6 +650,17 @@ mod tests {
     }
 
     #[test]
+    fn unpack_from_test_simple04() {
+        let mut buffer = vec![1, 0b00001000, 0b00000001, 0, 0b00000001, 0, 0b00100000, 0, 0b00100000, 0];
+        let column;
+
+        unsafe {
+            column = RleColumn::unpack_from(buffer.as_mut_ptr(), 1, Some(RleRange::range(0, 2)));
+        }
+        assert_eq!(column, RleColumn::compress(&[RgbVoxel::only_red(1), RgbVoxel::only_red(1), RgbVoxel::empty(), RgbVoxel::only_green(1), RgbVoxel::only_green(1)]), "Unpacking column with two range");
+    }
+
+    #[test]
     fn memory_size_test() {
         assert_eq!(
             RleColumn::compress(&[RgbVoxel::empty(), RgbVoxel::only_red(1), RgbVoxel::empty()])
