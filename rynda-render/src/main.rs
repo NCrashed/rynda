@@ -4,7 +4,12 @@ extern crate glfw;
 use gl::types::*;
 use glfw::{Action, Context, Key};
 use std::ffi::CString;
-use std::{io::Cursor, mem, ptr, str};
+use std::{mem, ptr, str};
+
+use rynda_render::render::{
+    shader::{compile_shader, link_program},
+    texture::create_texture,
+};
 
 // Vertex data
 static POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
@@ -72,109 +77,6 @@ out vec4 f_color;
 void main() {
     f_color = texture(img_output, tex_coords);
 }";
-
-fn compile_shader(src: &str, ty: GLenum) -> GLuint {
-    let shader;
-    unsafe {
-        shader = gl::CreateShader(ty);
-        // Attempt to compile the shader
-        let c_str = CString::new(src.as_bytes()).unwrap();
-        gl::ShaderSource(shader, 1, &c_str.as_ptr(), ptr::null());
-        gl::CompileShader(shader);
-
-        // Get the compile status
-        let mut status = gl::FALSE as GLint;
-        gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut status);
-
-        // Fail on error
-        if status != (gl::TRUE as GLint) {
-            let mut len = 0;
-            gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut len);
-            let mut buf = Vec::with_capacity(len as usize);
-            buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-            gl::GetShaderInfoLog(
-                shader,
-                len,
-                ptr::null_mut(),
-                buf.as_mut_ptr() as *mut GLchar,
-            );
-            panic!(
-                "{}",
-                str::from_utf8(&buf).expect("ShaderInfoLog not valid utf8")
-            );
-        }
-    }
-    shader
-}
-
-fn link_program(shaders: &[GLuint]) -> GLuint {
-    unsafe {
-        let program = gl::CreateProgram();
-        for s in shaders {
-            gl::AttachShader(program, *s);
-        }
-        gl::LinkProgram(program);
-        // Get the link status
-        let mut status = gl::FALSE as GLint;
-        gl::GetProgramiv(program, gl::LINK_STATUS, &mut status);
-
-        // Fail on error
-        if status != (gl::TRUE as GLint) {
-            let mut len: GLint = 0;
-            gl::GetProgramiv(program, gl::INFO_LOG_LENGTH, &mut len);
-            let mut buf = Vec::with_capacity(len as usize);
-            buf.set_len((len as usize) - 1); // subtract 1 to skip the trailing null character
-            gl::GetProgramInfoLog(
-                program,
-                len,
-                ptr::null_mut(),
-                buf.as_mut_ptr() as *mut GLchar,
-            );
-            panic!(
-                "{}",
-                str::from_utf8(&buf).expect("ProgramInfoLog not valid utf8")
-            );
-        }
-        program
-    }
-}
-
-unsafe fn create_texture(
-    unit: GLenum,
-    width: u32,
-    height: u32,
-    image: Option<&image::RgbaImage>,
-) -> GLuint {
-    let mut tex_id = 0;
-    gl::GenTextures(1, &mut tex_id);
-    gl::ActiveTexture(unit);
-    gl::BindTexture(gl::TEXTURE_2D, tex_id);
-    let datum = match image {
-        None => ptr::null(),
-        Some(i) => mem::transmute(i.as_ptr()),
-    };
-    gl::TexImage2D(
-        gl::TEXTURE_2D,
-        0,
-        gl::RGBA as GLint,
-        width as GLint,
-        height as GLint,
-        0,
-        gl::BGRA,
-        gl::UNSIGNED_BYTE,
-        datum,
-    );
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
-    gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
-    gl::TexParameteri(
-        gl::TEXTURE_2D,
-        gl::TEXTURE_MIN_FILTER,
-        gl::NEAREST_MIPMAP_NEAREST as GLint,
-    );
-    gl::GenerateMipmap(gl::TEXTURE_2D);
-    tex_id
-}
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
