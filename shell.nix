@@ -22,7 +22,7 @@ stdenv.mkDerivation rec {
     python3
     libGL
     glfw
-    # renderdoc # for debugging
+    renderdoc # for debugging
   ];
 
   APPEND_LIBRARY_PATH = lib.makeLibraryPath [

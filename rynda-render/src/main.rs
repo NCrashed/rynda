@@ -5,10 +5,17 @@ use gl::types::*;
 use glfw::{Action, Context, Key};
 use std::ffi::CString;
 use std::{mem, ptr, str};
+use ndarray::{arr3, Array3};
+use std::os::raw::c_void;
 
 use rynda_render::render::{
     shader::{compile_shader, link_program},
+    buffer::ShaderBuffer,
     texture::create_texture,
+};
+use rynda_format::types::{
+    volume::RleVolume,
+    voxel::RgbVoxel,
 };
 
 // Vertex data
@@ -20,35 +27,46 @@ static COMPUTE_SRC: &str = "
 #version 440 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-layout (binding = 0) uniform sampler2D img_input;
+
+uniform uvec2 pointermap_size;
+
+struct PointerColumn{
+    uint pointer;
+    uint fields; // unpacked fields
+};
+
+layout (shared, binding = 0) readonly buffer InputData {
+    PointerColumn columns[];
+};
+
 layout (rgba8, binding = 1) uniform image2D img_output;
 
+uint rle_count(uint fields) {
+    return fields & 0xFFFF;
+}
+
+uint skipped(uint fields) {
+    return (fields >> 16) & 0x3FF;
+}
+
+uint drawn(uint fields) {
+    return (fields >> 26) & 0x3F;
+}
+
+uint flat_index(uvec2 pos)
+{
+    return pos.x + pos.y * pointermap_size.x;
+}
+
 void main() {
-    ivec2 cell_coord = ivec2(gl_GlobalInvocationID.xy);
-    vec4 cell_sample = texelFetch(img_input, cell_coord, 0); 
+    uvec2 cell_coord = uvec2(gl_GlobalInvocationID.xy);
 
     vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
-    bool alive = cell_sample.r > 0;
-    int count = 0;
-    for(int i = -1; i <= 1; ++i)
-    {
-        for(int j = -1; j <= 1; ++j)
-        {
-            if(i == 0 && j == 0)
-             continue;
-            float tex = texelFetch(img_input, cell_coord + ivec2(i,j), 0).r;
-            if(tex > 0)
-                ++count;
-        }
-    }
-    float new_cell = cell_sample.r;
-    if(count < 2)                                   new_cell = 0.0f;
-    else if(alive && (count == 2 || count == 3))    new_cell = 1.0f;
-    else if(alive && count > 3)                     new_cell = 0.0f;
-    else if(!alive && count == 3)                   new_cell = 1.0f;
-    pixel = vec4(new_cell,new_cell,new_cell,1.0f);
- 
-    imageStore(img_output, cell_coord, pixel);
+    
+    PointerColumn pcol = columns[flat_index(cell_coord)];
+    pixel.r = drawn(pcol.fields);
+
+    imageStore(img_output, ivec2(cell_coord), pixel);
 }
 ";
 
@@ -78,6 +96,12 @@ void main() {
     f_color = texture(img_output, tex_coords);
 }";
 
+extern "system" fn debug_print(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void) {
+    let msg: &str = unsafe { std::str::from_utf8(std::slice::from_raw_parts(message as *const u8, length as usize)).unwrap() };
+    let iserror = if gltype == gl::DEBUG_TYPE_ERROR { "** GL ERROR **"} else {""};
+    println!("GL CALLBACK: {} type = {:#01x}, severity = {:#01x}, message = {}", iserror, gltype, severity, msg);
+}
+
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::Resizable(true));
@@ -97,12 +121,23 @@ fn main() {
     // Load the OpenGL function pointers3
     gl::load_with(|s| window.get_proc_address(s) as *const _);
 
+    unsafe {
+        gl::Enable( gl::DEBUG_OUTPUT );
+        gl::DebugMessageCallback(debug_print, std::ptr::null());
+    }
+
     // Create GLSL shaders
     let vs = compile_shader(VS_SRC, gl::VERTEX_SHADER);
     let fs = compile_shader(FS_SRC, gl::FRAGMENT_SHADER);
     let cs = compile_shader(COMPUTE_SRC, gl::COMPUTE_SHADER);
     let program = link_program(&[vs, fs]);
     let compute_program = link_program(&[cs]);
+
+    let z = RgbVoxel::empty();
+    let r = RgbVoxel::only_red(1);
+    let voxels: Array3<RgbVoxel> = arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
+    let volume: RleVolume = voxels.into();
+
     // building a texture with "OpenGL" drawn on it
     // let image = image::load(
     //     Cursor::new(&include_bytes!("../assets/life.png")[..]),
@@ -110,8 +145,8 @@ fn main() {
     // )
     // .unwrap()
     // .to_rgba8();
-    let image_dimensions = (1024, 1024); // image.dimensions();
-    let input_tex_id;
+    let pointmap_buffer;
+    let image_dimensions = (volume.xsize, volume.zsize); // image.dimensions();
     let output_tex_id;
 
     let mut vao = 0;
@@ -126,7 +161,11 @@ fn main() {
         //     image_dimensions.1,
         //     Some(&image),
         // );
-        input_tex_id = create_texture(gl::TEXTURE0, image_dimensions.0, image_dimensions.1, None);
+        // input_tex_id = create_texture(gl::TEXTURE0, image_dimensions.0, image_dimensions.1, None);
+
+        pointmap_buffer = ShaderBuffer::from_pointermap(&volume);
+        // println!("{:?}", std::slice::from_raw_parts(volume.pointers, (volume.xsize*volume.zsize) as usize) );
+
         output_tex_id = create_texture(gl::TEXTURE1, image_dimensions.0, image_dimensions.1, None);
 
         // Create Vertex Array Object
@@ -170,8 +209,16 @@ fn main() {
         );
 
         // Bind input texture in Texture Unit 0
-        gl::ActiveTexture(gl::TEXTURE0);
-        gl::BindTexture(gl::TEXTURE_2D, input_tex_id as GLuint);
+        // gl::ActiveTexture(gl::TEXTURE0);
+        // gl::BindTexture(gl::TEXTURE_2D, input_tex_id as GLuint);
+
+        // Bind input buffer 
+        gl::UseProgram(compute_program);
+        let pointermap_size = CString::new("pointermap_size").unwrap();
+        let pointermap_size_id = gl::GetUniformLocation(compute_program, pointermap_size.as_ptr());
+        gl::Uniform2ui(pointermap_size_id, volume.xsize, volume.zsize);
+        
+        gl::UseProgram(program);
         // Bind output texture in Texture Unit 1
         gl::ActiveTexture(gl::TEXTURE1);
         gl::BindTexture(gl::TEXTURE_2D, output_tex_id as GLuint);
@@ -181,10 +228,10 @@ fn main() {
         let output_tex_id = gl::GetUniformLocation(program, img_output.as_ptr());
         gl::Uniform1i(output_tex_id, 1);
 
-        // Set "img_input" sampler to use Texture Unit 0
-        let img_input = CString::new("img_input").unwrap();
-        let input_tex_id = gl::GetUniformLocation(compute_program, img_input.as_ptr());
-        gl::Uniform1i(input_tex_id, 0);
+        // // Set "img_input" sampler to use Texture Unit 0
+        // let img_input = CString::new("img_input").unwrap();
+        // let input_tex_id = gl::GetUniformLocation(compute_program, img_input.as_ptr());
+        // gl::Uniform1i(input_tex_id, 0);
     }
 
     while !window.should_close() {
@@ -196,6 +243,7 @@ fn main() {
         unsafe {
             // Compute next state of game
             gl::UseProgram(compute_program);
+            pointmap_buffer.bind(0);
             gl::BindImageTexture(
                 1,
                 output_tex_id as GLuint,
@@ -206,6 +254,7 @@ fn main() {
                 gl::RGBA8,
             );
             gl::DispatchCompute(image_dimensions.0, image_dimensions.1, 1);
+            gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, 0);
             gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
 
             // Clear the screen to black
@@ -222,24 +271,24 @@ fn main() {
             );
 
             // Copy to the next step
-            gl::CopyImageSubData(
-                output_tex_id,
-                gl::TEXTURE_2D,
-                0,
-                0,
-                0,
-                0,
-                input_tex_id,
-                gl::TEXTURE_2D,
-                0,
-                0,
-                0,
-                0,
-                image_dimensions.0 as GLint,
-                image_dimensions.1 as GLint,
-                1,
-            );
-            gl::GenerateMipmap(gl::TEXTURE_2D);
+            // gl::CopyImageSubData(
+            //     output_tex_id,
+            //     gl::TEXTURE_2D,
+            //     0,
+            //     0,
+            //     0,
+            //     0,
+            //     input_tex_id,
+            //     gl::TEXTURE_2D,
+            //     0,
+            //     0,
+            //     0,
+            //     0,
+            //     image_dimensions.0 as GLint,
+            //     image_dimensions.1 as GLint,
+            //     1,
+            // );
+            // gl::GenerateMipmap(gl::TEXTURE_2D);
         }
         window.swap_buffers();
     }
@@ -253,7 +302,6 @@ fn main() {
         gl::DeleteBuffers(1, &vbo);
         gl::DeleteVertexArrays(1, &vao);
         gl::DeleteBuffers(1, &eab);
-        gl::DeleteTextures(1, &input_tex_id);
         gl::DeleteTextures(1, &output_tex_id);
     }
 }

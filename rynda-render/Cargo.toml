@@ -21,3 +21,4 @@ gl = "0.6.0"
 glfw = "0.42.0"
 image = "0.23.14"
 rynda-format = { path = "../rynda-format" }
+ndarray = "0.15.3"
