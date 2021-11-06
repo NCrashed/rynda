@@ -33,7 +33,7 @@ impl Pipeline {
     pub fn new(vertex_shader: &str, fragment_shader: &str, compute_shader: &str, volume: &RleVolume) -> Self {
 
         let vs = Shader::compile(ShaderType::Vertex, vertex_shader);
-        let fs = Shader::compile(ShaderType::Fragment, str::from_utf8(include_bytes!("../../shaders/quad_fragment.glsl")).unwrap());
+        let fs = Shader::compile(ShaderType::Fragment, fragment_shader);
         let cs = Shader::compile(ShaderType::Compute, compute_shader);
         let program = ShaderProgram::link(vec![vs, fs]);
         let compute_program = ShaderProgram::link(vec![cs]);

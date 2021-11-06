@@ -1,7 +1,7 @@
 extern crate gl;
 extern crate glfw;
 
-use glfw::{Action, Context, Key};
+use glfw::{Action, Context, Key, CursorMode};
 use ndarray::{Array3};
 use std::str;
 
@@ -12,7 +12,7 @@ use rynda_render::render::{
     camera::Camera,
 };
 
-use glam::{Vec3, Mat4};
+use glam::{Vec3};
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -29,6 +29,7 @@ fn main() {
     window.set_key_polling(true);
     window.set_framebuffer_size_polling(true);
     window.set_cursor_pos_polling(true);
+    window.set_cursor_mode(CursorMode::Disabled);
     window.make_current();
 
     // Load the OpenGL function pointers3
@@ -60,16 +61,16 @@ fn main() {
     let mut camera = Camera::look_at(Vec3::new(-15.5, 0.0, -10.0), Vec3::ZERO);
 
     let (cx0, cy0) = window.get_cursor_pos();
-    let mut events_ctx = EventContext {
-        mode: 0, 
-        old_cx: cx0, 
-        old_cy: cy0,
-    };
+    let mut events_ctx = EventContext::default();
+    events_ctx.old_cx = cx0;
+    events_ctx.old_cy = cy0;
+
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
             handle_window_event(&mut window, event, &mut events_ctx, &mut camera);
         }
+        events_ctx.move_camera(&mut camera);
 
         unsafe {
             pipeline.draw(|| {
@@ -87,11 +88,47 @@ fn main() {
 }
 
 const MOUSE_ROTATION_SPEED: f64 = 0.001; 
+const CAMERA_MOVE_SPEED: f64 = 0.1; 
 
 struct EventContext {
     pub mode: u32, 
     pub old_cx: f64, 
     pub old_cy: f64,
+    pub left: bool, 
+    pub right: bool, 
+    pub up: bool, 
+    pub down: bool,
+}
+
+impl Default for EventContext {
+    fn default() -> Self {
+        EventContext {
+            mode: 0, 
+            old_cx: 0., 
+            old_cy: 0.,
+            left: false, 
+            right: false, 
+            up: false, 
+            down: false,
+        }
+    }
+}
+
+impl EventContext {
+    pub fn move_camera(&self, camera: &mut Camera) {
+        if self.up {
+            camera.move_forward(CAMERA_MOVE_SPEED);
+        }
+        if self.down {
+            camera.move_forward(-CAMERA_MOVE_SPEED);
+        }
+        if self.left {
+            camera.move_right(-CAMERA_MOVE_SPEED);
+        }
+        if self.right {
+            camera.move_right(CAMERA_MOVE_SPEED);
+        }
+    }
 }
 
 fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, ctx: &mut EventContext, camera: &mut Camera) {
@@ -103,6 +140,18 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, ctx:
             } else {
                 ctx.mode = 0;
             }
+        }
+        glfw::WindowEvent::Key(Key::Up, _, state, _) => {
+            ctx.up = state != Action::Release;
+        }
+        glfw::WindowEvent::Key(Key::Down, _, state, _) => {
+            ctx.down = state != Action::Release;
+        }
+        glfw::WindowEvent::Key(Key::Left, _, state, _) => {
+            ctx.left = state != Action::Release;
+        }
+        glfw::WindowEvent::Key(Key::Right, _, state, _) => {
+            ctx.right = state != Action::Release;
         }
         glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
             gl::Viewport(0, 0, width, height);

@@ -53,14 +53,28 @@ impl Camera {
         self.projection_matrix() * self.view_matrix()
     }
 
+    /// Get right vector direction normalized
+    pub fn right(&self) -> Vec3 {
+        self.forward.cross(Vec3::Y).normalize()
+    }
+
     /// Update rotation of camera according to dx and dy displacment of cursor
     pub fn update_cursor(&mut self, dx: f64, dy: f64) {
         if dx.abs() >= std::f64::EPSILON {
             self.forward = Quat::from_rotation_y(-dx as f32) * self.forward;
         }
         if dy.abs() >= std::f64::EPSILON  {
-            let left = self.forward.cross(Vec3::Y).normalize();
-            self.forward = Quat::from_axis_angle(-left, dy as f32) * self.forward;
+            self.forward = Quat::from_axis_angle(-self.right(), dy as f32) * self.forward;
         }
+    }
+
+    /// Move camera forward by given amount
+    pub fn move_forward(&mut self, dv: f64) {
+        self.translation += self.forward * (dv as f32);
+    }
+
+    /// Move camera forward by given amount
+    pub fn move_right(&mut self, dv: f64) {
+        self.translation += self.right() * (dv as f32);
     }
 }
