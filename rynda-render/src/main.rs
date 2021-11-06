@@ -3,19 +3,16 @@ extern crate glfw;
 
 use gl::types::*;
 use glfw::{Action, Context, Key};
-use std::ffi::CString;
-use std::{mem, ptr, str};
 use ndarray::{arr3, Array3};
+use std::ffi::CString;
 use std::os::raw::c_void;
+use std::{mem, ptr, str};
 
+use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
-    shader::{compile_shader, link_program},
     buffer::ShaderBuffer,
+    shader::{compile_shader, link_program},
     texture::create_texture,
-};
-use rynda_format::types::{
-    volume::RleVolume,
-    voxel::RgbVoxel,
 };
 
 // Vertex data
@@ -96,10 +93,31 @@ void main() {
     f_color = texture(img_output, tex_coords);
 }";
 
-extern "system" fn debug_print(source: GLenum, gltype: GLenum, id: GLuint, severity: GLenum, length: GLsizei, message: *const GLchar, userParam: *mut c_void) {
-    let msg: &str = unsafe { std::str::from_utf8(std::slice::from_raw_parts(message as *const u8, length as usize)).unwrap() };
-    let iserror = if gltype == gl::DEBUG_TYPE_ERROR { "** GL ERROR **"} else {""};
-    println!("GL CALLBACK: {} type = {:#01x}, severity = {:#01x}, message = {}", iserror, gltype, severity, msg);
+extern "system" fn debug_print(
+    source: GLenum,
+    gltype: GLenum,
+    id: GLuint,
+    severity: GLenum,
+    length: GLsizei,
+    message: *const GLchar,
+    userParam: *mut c_void,
+) {
+    let msg: &str = unsafe {
+        std::str::from_utf8(std::slice::from_raw_parts(
+            message as *const u8,
+            length as usize,
+        ))
+        .unwrap()
+    };
+    let iserror = if gltype == gl::DEBUG_TYPE_ERROR {
+        "** GL ERROR **"
+    } else {
+        ""
+    };
+    println!(
+        "GL CALLBACK: {} type = {:#01x}, severity = {:#01x}, message = {}",
+        iserror, gltype, severity, msg
+    );
 }
 
 fn main() {
@@ -122,7 +140,7 @@ fn main() {
     gl::load_with(|s| window.get_proc_address(s) as *const _);
 
     unsafe {
-        gl::Enable( gl::DEBUG_OUTPUT );
+        gl::Enable(gl::DEBUG_OUTPUT);
         gl::DebugMessageCallback(debug_print, std::ptr::null());
     }
 
@@ -133,9 +151,19 @@ fn main() {
     let program = link_program(&[vs, fs]);
     let compute_program = link_program(&[cs]);
 
-    let z = RgbVoxel::empty();
-    let r = RgbVoxel::only_red(1);
-    let voxels: Array3<RgbVoxel> = arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
+    // let z = RgbVoxel::empty();
+    // let r = RgbVoxel::only_red(1);
+    // let voxels: Array3<RgbVoxel> = arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
+    let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
+        let sx = (x as isize) - 128;
+        let sz = (z as isize) - 128;
+        let sy = (y as isize) - 256;
+        if sx * sx + sz * sz + sy * sy < 64 * 64 {
+            RgbVoxel::only_red(1)
+        } else {
+            RgbVoxel::empty()
+        }
+    });
     let volume: RleVolume = voxels.into();
 
     // building a texture with "OpenGL" drawn on it
@@ -212,12 +240,11 @@ fn main() {
         // gl::ActiveTexture(gl::TEXTURE0);
         // gl::BindTexture(gl::TEXTURE_2D, input_tex_id as GLuint);
 
-        // Bind input buffer 
+        // Bind input buffer
         gl::UseProgram(compute_program);
         let pointermap_size = CString::new("pointermap_size").unwrap();
         let pointermap_size_id = gl::GetUniformLocation(compute_program, pointermap_size.as_ptr());
         gl::Uniform2ui(pointermap_size_id, volume.xsize, volume.zsize);
-        
         gl::UseProgram(program);
         // Bind output texture in Texture Unit 1
         gl::ActiveTexture(gl::TEXTURE1);
