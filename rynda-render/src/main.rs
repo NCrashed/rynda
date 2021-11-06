@@ -25,6 +25,7 @@ static COMPUTE_SRC: &str = "
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 uniform uvec3 volume_size;
+uniform int mode;
 
 struct PointerColumn{
     uint pointer;
@@ -60,7 +61,14 @@ void main() {
     vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
     
     PointerColumn pcol = columns[flat_index(cell_coord)];
-    float height = float(drawn(pcol.fields)) / float(volume_size.y);
+    float height = 0.0; 
+    
+    if (mode == 0) {
+        height = float(drawn(pcol.fields)) / float(volume_size.y);
+    } else {
+        height = float(skipped(pcol.fields)) / float(volume_size.y);
+    }
+    
     pixel.r = height;
     pixel.g = height;
     pixel.b = height;
@@ -183,6 +191,8 @@ fn main() {
     let mut eab = 0;
     let mut vbo = 0;
 
+    let mode_id;
+
     unsafe {
         // Create input texture
         // input_tex_id = create_texture(
@@ -257,22 +267,27 @@ fn main() {
         let output_tex_id = gl::GetUniformLocation(program, img_output.as_ptr());
         gl::Uniform1i(output_tex_id, 1);
 
+        let mode_str = CString::new("mode").unwrap();
+        mode_id = gl::GetUniformLocation(compute_program, mode_str.as_ptr());
+
         // // Set "img_input" sampler to use Texture Unit 0
         // let img_input = CString::new("img_input").unwrap();
         // let input_tex_id = gl::GetUniformLocation(compute_program, img_input.as_ptr());
         // gl::Uniform1i(input_tex_id, 0);
     }
 
+    let mut mode: u32 = 0;
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event);
+            handle_window_event(&mut window, event, &mut mode);
         }
 
         unsafe {
             // Compute next state of game
             gl::UseProgram(compute_program);
             pointmap_buffer.bind(0);
+            gl::Uniform1i(mode_id, mode as i32);
             gl::BindImageTexture(
                 1,
                 output_tex_id as GLuint,
@@ -335,9 +350,16 @@ fn main() {
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent) {
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, mode: &mut u32) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => window.set_should_close(true),
+        glfw::WindowEvent::Key(Key::Space, _, Action::Press, _) => {
+            if *mode == 0 {
+                *mode = 1;
+            } else {
+                *mode = 0;
+            }
+        }
         glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
             gl::Viewport(0, 0, width, height);
         },
