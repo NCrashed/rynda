@@ -4,14 +4,13 @@ extern crate glfw;
 use gl::types::*;
 use glfw::{Action, Context, Key};
 use ndarray::{arr3, Array3};
-use std::ffi::CString;
 use std::os::raw::c_void;
 use std::{mem, ptr, str};
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
     buffer::ShaderBuffer,
-    shader::{compile_shader, link_program},
+    shader::{ShaderType, Shader, ShaderProgram},
     texture::create_texture,
 };
 
@@ -155,11 +154,11 @@ fn main() {
     }
 
     // Create GLSL shaders
-    let vs = compile_shader(VS_SRC, gl::VERTEX_SHADER);
-    let fs = compile_shader(FS_SRC, gl::FRAGMENT_SHADER);
-    let cs = compile_shader(COMPUTE_SRC, gl::COMPUTE_SHADER);
-    let program = link_program(&[vs, fs]);
-    let compute_program = link_program(&[cs]);
+    let vs = Shader::compile(ShaderType::Vertex, VS_SRC);
+    let fs = Shader::compile(ShaderType::Fragment, FS_SRC);
+    let cs = Shader::compile(ShaderType::Compute, COMPUTE_SRC);
+    let program = ShaderProgram::link(vec![vs, fs]);
+    let compute_program = ShaderProgram::link(vec![cs]);
 
     // let z = RgbVoxel::empty();
     // let r = RgbVoxel::only_red(1);
@@ -215,11 +214,10 @@ fn main() {
         );
 
         // Use shader program
-        gl::UseProgram(program);
+        program.use_program();
 
         // Specify the layout of the vertex data
-        let position = CString::new("position").unwrap();
-        let pos_attr = gl::GetAttribLocation(program, position.as_ptr());
+        let pos_attr = program.attr_location("position");
         gl::EnableVertexAttribArray(pos_attr as GLuint);
         gl::VertexAttribPointer(
             pos_attr as GLuint,
@@ -231,22 +229,20 @@ fn main() {
         );
 
         // Bind input buffer
-        gl::UseProgram(compute_program);
-        let volume_size = CString::new("volume_size").unwrap();
-        let volume_size_id = gl::GetUniformLocation(compute_program, volume_size.as_ptr());
+        compute_program.use_program();
+        let volume_size_id = compute_program.uniform_location("volume_size");
         gl::Uniform3ui(volume_size_id, volume.xsize, volume.ysize, volume.zsize);
-        gl::UseProgram(program);
+        
         // Bind output texture in Texture Unit 1
+        program.use_program();
         gl::ActiveTexture(gl::TEXTURE1);
         gl::BindTexture(gl::TEXTURE_2D, output_tex_id as GLuint);
 
         // Set our "texture" sampler to use Texture Unit 1
-        let img_output = CString::new("img_output").unwrap();
-        let output_tex_id = gl::GetUniformLocation(program, img_output.as_ptr());
+        let output_tex_id = program.uniform_location("img_output");
         gl::Uniform1i(output_tex_id, 1);
 
-        let mode_str = CString::new("mode").unwrap();
-        mode_id = gl::GetUniformLocation(compute_program, mode_str.as_ptr());
+        mode_id = compute_program.uniform_location("mode");
     }
 
     let mut mode: u32 = 0;
@@ -258,7 +254,7 @@ fn main() {
 
         unsafe {
             // Compute next state of game
-            gl::UseProgram(compute_program);
+            compute_program.use_program();
             pointmap_buffer.bind(0);
             gl::Uniform1i(mode_id, mode as i32);
             gl::BindImageTexture(
@@ -275,7 +271,7 @@ fn main() {
             gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
 
             // Clear the screen to black
-            gl::UseProgram(program);
+            program.use_program();
             gl::ClearColor(0.3, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
@@ -291,11 +287,6 @@ fn main() {
     }
 
     unsafe {
-        gl::DeleteProgram(program);
-        gl::DeleteProgram(compute_program);
-        gl::DeleteShader(fs);
-        gl::DeleteShader(vs);
-        gl::DeleteShader(cs);
         gl::DeleteBuffers(1, &vbo);
         gl::DeleteVertexArrays(1, &vao);
         gl::DeleteBuffers(1, &eab);
