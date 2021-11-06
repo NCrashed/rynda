@@ -176,13 +176,6 @@ fn main() {
     });
     let volume: RleVolume = voxels.into();
 
-    // building a texture with "OpenGL" drawn on it
-    // let image = image::load(
-    //     Cursor::new(&include_bytes!("../assets/life.png")[..]),
-    //     image::ImageFormat::Png,
-    // )
-    // .unwrap()
-    // .to_rgba8();
     let pointmap_buffer;
     let image_dimensions = (volume.xsize, volume.zsize); // image.dimensions();
     let output_tex_id;
@@ -194,18 +187,7 @@ fn main() {
     let mode_id;
 
     unsafe {
-        // Create input texture
-        // input_tex_id = create_texture(
-        //     gl::TEXTURE0,
-        //     image_dimensions.0,
-        //     image_dimensions.1,
-        //     Some(&image),
-        // );
-        // input_tex_id = create_texture(gl::TEXTURE0, image_dimensions.0, image_dimensions.1, None);
-
         pointmap_buffer = ShaderBuffer::from_pointermap(&volume);
-        // println!("{:?}", std::slice::from_raw_parts(volume.pointers, (volume.xsize*volume.zsize) as usize) );
-
         output_tex_id = create_texture(gl::TEXTURE1, image_dimensions.0, image_dimensions.1, None);
 
         // Create Vertex Array Object
@@ -248,10 +230,6 @@ fn main() {
             ptr::null(),
         );
 
-        // Bind input texture in Texture Unit 0
-        // gl::ActiveTexture(gl::TEXTURE0);
-        // gl::BindTexture(gl::TEXTURE_2D, input_tex_id as GLuint);
-
         // Bind input buffer
         gl::UseProgram(compute_program);
         let volume_size = CString::new("volume_size").unwrap();
@@ -269,11 +247,6 @@ fn main() {
 
         let mode_str = CString::new("mode").unwrap();
         mode_id = gl::GetUniformLocation(compute_program, mode_str.as_ptr());
-
-        // // Set "img_input" sampler to use Texture Unit 0
-        // let img_input = CString::new("img_input").unwrap();
-        // let input_tex_id = gl::GetUniformLocation(compute_program, img_input.as_ptr());
-        // gl::Uniform1i(input_tex_id, 0);
     }
 
     let mut mode: u32 = 0;
@@ -313,26 +286,6 @@ fn main() {
                 gl::UNSIGNED_SHORT,
                 ptr::null(),
             );
-
-            // Copy to the next step
-            // gl::CopyImageSubData(
-            //     output_tex_id,
-            //     gl::TEXTURE_2D,
-            //     0,
-            //     0,
-            //     0,
-            //     0,
-            //     input_tex_id,
-            //     gl::TEXTURE_2D,
-            //     0,
-            //     0,
-            //     0,
-            //     0,
-            //     image_dimensions.0 as GLint,
-            //     image_dimensions.1 as GLint,
-            //     1,
-            // );
-            // gl::GenerateMipmap(gl::TEXTURE_2D);
         }
         window.swap_buffers();
     }
