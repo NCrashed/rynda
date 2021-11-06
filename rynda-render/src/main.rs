@@ -12,6 +12,7 @@ use rynda_render::render::{
     buffer::{
         shader::ShaderBuffer,
         vertex::VertexBuffer,
+        index::IndexBuffer,
     },
     shader::{ShaderType, Shader, ShaderProgram},
     texture::Texture,
@@ -19,7 +20,7 @@ use rynda_render::render::{
 
 // Vertex data
 static POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
-static INDEX_DATA: [u16; 4] = [1, 2, 0, 3];
+static INDEX_DATA: [GLshort; 4] = [1, 2, 0, 3];
 
 // Compute shader sources
 static COMPUTE_SRC: &str = "
@@ -183,7 +184,7 @@ fn main() {
     let output_tex = Texture::new(gl::TEXTURE1, image_dimensions.0, image_dimensions.1, None);
 
     let mut vao = 0;
-    let mut eab = 0;
+    let ebo: IndexBuffer<GLshort>;
     let vbo: VertexBuffer<GLfloat>;
 
     let mode_id;
@@ -197,14 +198,7 @@ fn main() {
         vbo = VertexBuffer::new(&POSITION_DATA);
 
         // Create buffer for indecies and fill data to it
-        gl::GenBuffers(1, &mut eab);
-        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, eab);
-        gl::BufferData(
-            gl::ELEMENT_ARRAY_BUFFER,
-            (INDEX_DATA.len() * mem::size_of::<GLshort>()) as GLsizeiptr,
-            mem::transmute(&INDEX_DATA[0]),
-            gl::STATIC_DRAW,
-        );
+        ebo = IndexBuffer::new(&INDEX_DATA);
 
         // Use shader program
         program.use_program();
@@ -280,7 +274,6 @@ fn main() {
     }
 
     unsafe {
-        gl::DeleteBuffers(1, &eab);
         gl::DeleteVertexArrays(1, &vao);
     }
 }

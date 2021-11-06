@@ -2,28 +2,30 @@ use gl::types::*;
 use std::mem;
 use std::marker::PhantomData;
 
-/// A Vertex Buffer Object (VBO)
-pub struct VertexBuffer<T> {
+/// A Index Buffer Objects (IBO)
+pub struct IndexBuffer<T> {
     /// Makes compiler happy about T usage
     phantom: PhantomData<T>,
     /// OpenGL id of the buffer
     pub id: GLuint,
+    /// Number of elements in the index buffer
+    pub length: usize, 
 }
 
-impl<T> VertexBuffer<T> {
+impl<T> IndexBuffer<T> {
     pub fn new(data: &[T]) -> Self {
-        let mut vbo = 0;
+        let mut ebo = 0;
         unsafe {
-            gl::GenBuffers(1, &mut vbo);
-            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::GenBuffers(1, &mut ebo);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
             gl::BufferData(
-                gl::ARRAY_BUFFER,
+                gl::ELEMENT_ARRAY_BUFFER,
                 (data.len() * mem::size_of::<T>()) as GLsizeiptr,
                 mem::transmute(&data[0]),
                 gl::STATIC_DRAW,
             );
         }
-        VertexBuffer { phantom: PhantomData, id: vbo }
+        IndexBuffer { phantom: PhantomData, id: ebo, length: data.len() }
     }
 
     pub fn bind(&self) {
@@ -33,7 +35,7 @@ impl<T> VertexBuffer<T> {
     }
 }
 
-impl<T> Drop for VertexBuffer<T> {
+impl<T> Drop for IndexBuffer<T> {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteBuffers(1, &self.id);
