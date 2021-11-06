@@ -9,7 +9,7 @@ use std::{mem, ptr, str};
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
-    buffer::ShaderBuffer,
+    buffer::shader::ShaderBuffer,
     shader::{ShaderType, Shader, ShaderProgram},
     texture::Texture,
 };
@@ -285,8 +285,8 @@ fn main() {
 
     unsafe {
         gl::DeleteBuffers(1, &vbo);
-        gl::DeleteVertexArrays(1, &vao);
         gl::DeleteBuffers(1, &eab);
+        gl::DeleteVertexArrays(1, &vao);
     }
 }
 
