@@ -28,6 +28,7 @@ fn main() {
 
     window.set_key_polling(true);
     window.set_framebuffer_size_polling(true);
+    window.set_cursor_pos_polling(true);
     window.make_current();
 
     // Load the OpenGL function pointers3
@@ -58,16 +59,21 @@ fn main() {
     let mvp_id = pipeline.quad_program.uniform_location("MVP");
     let mut camera = Camera::look_at(Vec3::new(-15.5, 0.0, -10.0), Vec3::ZERO);
 
-    let mut mode: u32 = 0;
+    let (cx0, cy0) = window.get_cursor_pos();
+    let mut events_ctx = EventContext {
+        mode: 0, 
+        old_cx: cx0, 
+        old_cy: cy0,
+    };
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event, &mut mode);
+            handle_window_event(&mut window, event, &mut events_ctx, &mut camera);
         }
 
         unsafe {
             pipeline.draw(|| {
-                gl::Uniform1i(mode_id, mode as i32);
+                gl::Uniform1i(mode_id, events_ctx.mode as i32);
                 let mvp = camera.matrix();
                 // println!("{}", mvp);
                 // let mvp = Mat4::from_translation(Vec3::new(0.0, 0.5, 0.0));
@@ -80,18 +86,33 @@ fn main() {
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, mode: &mut u32) {
+const MOUSE_ROTATION_SPEED: f64 = 0.001; 
+
+struct EventContext {
+    pub mode: u32, 
+    pub old_cx: f64, 
+    pub old_cy: f64,
+}
+
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, ctx: &mut EventContext, camera: &mut Camera) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => window.set_should_close(true),
         glfw::WindowEvent::Key(Key::Space, _, Action::Press, _) => {
-            if *mode == 0 {
-                *mode = 1;
+            if ctx.mode == 0 {
+                ctx.mode = 1;
             } else {
-                *mode = 0;
+                ctx.mode = 0;
             }
         }
         glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
             gl::Viewport(0, 0, width, height);
+        },
+        glfw::WindowEvent::CursorPos(cx, cy) => {
+            let dx = (cx - ctx.old_cx) * MOUSE_ROTATION_SPEED;
+            let dy = (cy - ctx.old_cy) * MOUSE_ROTATION_SPEED;
+            camera.update_cursor(dx , dy);
+            ctx.old_cx = cx;
+            ctx.old_cy = cy;
         },
         _ => {}
     }
