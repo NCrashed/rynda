@@ -9,7 +9,10 @@ use std::{mem, ptr, str};
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
-    buffer::shader::ShaderBuffer,
+    buffer::{
+        shader::ShaderBuffer,
+        vertex::VertexBuffer,
+    },
     shader::{ShaderType, Shader, ShaderProgram},
     texture::Texture,
 };
@@ -181,7 +184,7 @@ fn main() {
 
     let mut vao = 0;
     let mut eab = 0;
-    let mut vbo = 0;
+    let vbo: VertexBuffer<GLfloat>;
 
     let mode_id;
 
@@ -191,14 +194,7 @@ fn main() {
         gl::BindVertexArray(vao);
 
         // Create a Vertex Buffer Object and copy the vertex data to it
-        gl::GenBuffers(1, &mut vbo);
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (POSITION_DATA.len() * mem::size_of::<GLfloat>()) as GLsizeiptr,
-            mem::transmute(&POSITION_DATA[0]),
-            gl::STATIC_DRAW,
-        );
+        vbo = VertexBuffer::new(&POSITION_DATA);
 
         // Create buffer for indecies and fill data to it
         gl::GenBuffers(1, &mut eab);
@@ -284,7 +280,6 @@ fn main() {
     }
 
     unsafe {
-        gl::DeleteBuffers(1, &vbo);
         gl::DeleteBuffers(1, &eab);
         gl::DeleteVertexArrays(1, &vao);
     }
