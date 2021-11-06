@@ -24,8 +24,7 @@ static COMPUTE_SRC: &str = "
 #version 440 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-
-uniform uvec2 pointermap_size;
+uniform uvec3 volume_size;
 
 struct PointerColumn{
     uint pointer;
@@ -52,7 +51,7 @@ uint drawn(uint fields) {
 
 uint flat_index(uvec2 pos)
 {
-    return pos.x + pos.y * pointermap_size.x;
+    return pos.x + pos.y * volume_size.x;
 }
 
 void main() {
@@ -61,7 +60,10 @@ void main() {
     vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
     
     PointerColumn pcol = columns[flat_index(cell_coord)];
-    pixel.r = drawn(pcol.fields);
+    float height = float(drawn(pcol.fields)) / float(volume_size.y);
+    pixel.r = height;
+    pixel.g = height;
+    pixel.b = height;
 
     imageStore(img_output, ivec2(cell_coord), pixel);
 }
@@ -242,9 +244,9 @@ fn main() {
 
         // Bind input buffer
         gl::UseProgram(compute_program);
-        let pointermap_size = CString::new("pointermap_size").unwrap();
-        let pointermap_size_id = gl::GetUniformLocation(compute_program, pointermap_size.as_ptr());
-        gl::Uniform2ui(pointermap_size_id, volume.xsize, volume.zsize);
+        let volume_size = CString::new("volume_size").unwrap();
+        let volume_size_id = gl::GetUniformLocation(compute_program, volume_size.as_ptr());
+        gl::Uniform3ui(volume_size_id, volume.xsize, volume.ysize, volume.zsize);
         gl::UseProgram(program);
         // Bind output texture in Texture Unit 1
         gl::ActiveTexture(gl::TEXTURE1);
