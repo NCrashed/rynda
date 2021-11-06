@@ -186,7 +186,7 @@ impl Into<Array3<RgbVoxel>> for RleVolume {
                     pcol.rle_count as usize,
                     Some(pcol.first_range),
                 );
-                
+
                 for (y, color) in col.decompress().iter().enumerate() {
                     arr[(x, y, z)] = color.clone();
                 }

@@ -1,5 +1,5 @@
 use super::{
-    range::{RleRange, RLE_RANGE_SIZE, RLE_SKIPPED_MAX, RLE_DRAWN_MAX},
+    range::{RleRange, RLE_DRAWN_MAX, RLE_RANGE_SIZE, RLE_SKIPPED_MAX},
     voxel::{RgbVoxel, RGB_VOXEL_SIZE},
 };
 
@@ -94,11 +94,15 @@ impl RleColumn {
     }
 
     /// Unpack the data of the column from raw memory chunk. It must contain all the column which size depends on rle_count of ranges.
-    pub unsafe fn unpack_from(mem: *const u8, rle_count: usize, first_range: Option<RleRange>) -> Self {
+    pub unsafe fn unpack_from(
+        mem: *const u8,
+        rle_count: usize,
+        first_range: Option<RleRange>,
+    ) -> Self {
         let mut ranges;
         let mut colors = vec![];
         let mut drawn;
-        
+
         match first_range {
             None => {
                 ranges = vec![];
@@ -110,18 +114,23 @@ impl RleColumn {
             }
         };
 
-        for i in 0 .. rle_count {
-            let ptr = mem.offset((i*RLE_RANGE_SIZE) as isize);
+        for i in 0..rle_count {
+            let ptr = mem.offset((i * RLE_RANGE_SIZE) as isize);
             let mut range_bytes = [0; 2];
-            range_bytes.as_mut_ptr().copy_from_nonoverlapping(ptr, range_bytes.len());
+            range_bytes
+                .as_mut_ptr()
+                .copy_from_nonoverlapping(ptr, range_bytes.len());
             let range = RleRange::from_bytes(range_bytes);
             drawn += range.drawn();
             ranges.push(range);
         }
-        for i in 0 .. drawn {
-            let ptr = mem.offset((rle_count*RLE_RANGE_SIZE + (i as usize)*RGB_VOXEL_SIZE) as isize);
+        for i in 0..drawn {
+            let ptr =
+                mem.offset((rle_count * RLE_RANGE_SIZE + (i as usize) * RGB_VOXEL_SIZE) as isize);
             let mut color_bytes = [0; 2];
-            color_bytes.as_mut_ptr().copy_from_nonoverlapping(ptr, color_bytes.len());
+            color_bytes
+                .as_mut_ptr()
+                .copy_from_nonoverlapping(ptr, color_bytes.len());
             let color = RgbVoxel::from_bytes(color_bytes);
             colors.push(color);
         }
@@ -149,7 +158,7 @@ impl RleColumn {
         self.ranges.len()
     }
 
-    /// Merge repeated empty ranges and merge drawn ranges. 
+    /// Merge repeated empty ranges and merge drawn ranges.
     pub fn optimize(self) -> Self {
         let mut new_ranges = vec![];
         let mut mprev_range: Option<RleRange> = None;
@@ -179,7 +188,10 @@ impl RleColumn {
             Some(prev_range) => new_ranges.push(prev_range),
         }
 
-        RleColumn { ranges: new_ranges, colors: self.colors }
+        RleColumn {
+            ranges: new_ranges,
+            colors: self.colors,
+        }
     }
 }
 
@@ -415,48 +427,60 @@ mod tests {
     #[test]
     fn optimize_test_01() {
         let column_a = RleColumn {
-                ranges: vec![],
-                colors: vec![],
-            };
+            ranges: vec![],
+            colors: vec![],
+        };
         let column_b = RleColumn {
             ranges: vec![],
             colors: vec![],
         };
-        assert_eq!(column_a.optimize(), column_b, "Empty column optmizes to empty column");
+        assert_eq!(
+            column_a.optimize(),
+            column_b,
+            "Empty column optmizes to empty column"
+        );
     }
 
     #[test]
     fn optimize_test_02() {
         let column_a = RleColumn {
-                ranges: vec![RleRange::range(1, 1)],
-                colors: vec![RgbVoxel::only_red(1)],
-            };
+            ranges: vec![RleRange::range(1, 1)],
+            colors: vec![RgbVoxel::only_red(1)],
+        };
         let column_b = RleColumn {
             ranges: vec![RleRange::range(1, 1)],
             colors: vec![RgbVoxel::only_red(1)],
         };
-        assert_eq!(column_a.optimize(), column_b, "Single sized column optmizes to the same column");
+        assert_eq!(
+            column_a.optimize(),
+            column_b,
+            "Single sized column optmizes to the same column"
+        );
     }
 
     #[test]
     fn optimize_test_03() {
         let column_a = RleColumn {
-                ranges: vec![RleRange::range(1, 1), RleRange::range(1, 1)],
-                colors: vec![RgbVoxel::only_red(1), RgbVoxel::only_blue(1)],
-            };
+            ranges: vec![RleRange::range(1, 1), RleRange::range(1, 1)],
+            colors: vec![RgbVoxel::only_red(1), RgbVoxel::only_blue(1)],
+        };
         let column_b = RleColumn {
             ranges: vec![RleRange::range(1, 1), RleRange::range(1, 1)],
             colors: vec![RgbVoxel::only_red(1), RgbVoxel::only_blue(1)],
         };
-        assert_eq!(column_a.optimize(), column_b, "Optimized column optmizes to the same column");
+        assert_eq!(
+            column_a.optimize(),
+            column_b,
+            "Optimized column optmizes to the same column"
+        );
     }
 
     #[test]
     fn optimize_test_04() {
         let column_a = RleColumn {
-                ranges: vec![RleRange::range(1, 0), RleRange::range(1, 1)],
-                colors: vec![RgbVoxel::only_blue(1)],
-            };
+            ranges: vec![RleRange::range(1, 0), RleRange::range(1, 1)],
+            colors: vec![RgbVoxel::only_blue(1)],
+        };
         let column_b = RleColumn {
             ranges: vec![RleRange::range(2, 1)],
             colors: vec![RgbVoxel::only_blue(1)],
@@ -467,9 +491,14 @@ mod tests {
     #[test]
     fn optimize_test_05() {
         let column_a = RleColumn {
-                ranges: vec![RleRange::range(1, 0), RleRange::range(1, 0), RleRange::range(1, 1), RleRange::range(1, 0)],
-                colors: vec![RgbVoxel::only_blue(1)],
-            };
+            ranges: vec![
+                RleRange::range(1, 0),
+                RleRange::range(1, 0),
+                RleRange::range(1, 1),
+                RleRange::range(1, 0),
+            ],
+            colors: vec![RgbVoxel::only_blue(1)],
+        };
         let column_b = RleColumn {
             ranges: vec![RleRange::range(3, 1), RleRange::range(1, 0)],
             colors: vec![RgbVoxel::only_blue(1)],
@@ -480,12 +509,24 @@ mod tests {
     #[test]
     fn optimize_test_06() {
         let column_a = RleColumn {
-                ranges: vec![RleRange::range(1, 1), RleRange::range(0, 1), RleRange::range(1, 1)],
-                colors: vec![RgbVoxel::only_blue(1), RgbVoxel::only_red(1), RgbVoxel::only_blue(1)],
-            };
+            ranges: vec![
+                RleRange::range(1, 1),
+                RleRange::range(0, 1),
+                RleRange::range(1, 1),
+            ],
+            colors: vec![
+                RgbVoxel::only_blue(1),
+                RgbVoxel::only_red(1),
+                RgbVoxel::only_blue(1),
+            ],
+        };
         let column_b = RleColumn {
             ranges: vec![RleRange::range(1, 2), RleRange::range(1, 1)],
-            colors: vec![RgbVoxel::only_blue(1), RgbVoxel::only_red(1), RgbVoxel::only_blue(1)],
+            colors: vec![
+                RgbVoxel::only_blue(1),
+                RgbVoxel::only_red(1),
+                RgbVoxel::only_blue(1),
+            ],
         };
         assert_eq!(column_a.optimize(), column_b, "Drawn range optimization");
     }
@@ -548,7 +589,9 @@ mod tests {
 
     #[test]
     fn pack_into_test_simple04() {
-        let (_, column) = RleColumn::compress(&[RgbVoxel::only_red(1), RgbVoxel::only_red(1)]).split_head().unwrap();
+        let (_, column) = RleColumn::compress(&[RgbVoxel::only_red(1), RgbVoxel::only_red(1)])
+            .split_head()
+            .unwrap();
         let mut buffer = vec![0; 4];
         let size;
         unsafe {
@@ -561,7 +604,6 @@ mod tests {
             "Packing column with single color range with split"
         );
     }
-
 
     #[test]
     fn pack_into_test_complex() {
@@ -591,7 +633,11 @@ mod tests {
         unsafe {
             column = RleColumn::unpack_from(buffer.as_mut_ptr(), 0, None);
         }
-        assert_eq!(column, RleColumn::compress(&[]), "Unpacking column with no ranges");
+        assert_eq!(
+            column,
+            RleColumn::compress(&[]),
+            "Unpacking column with no ranges"
+        );
     }
 
     #[test]
@@ -602,7 +648,11 @@ mod tests {
         unsafe {
             column = RleColumn::unpack_from(buffer.as_mut_ptr(), 0, Some(RleRange::range(1, 0)));
         }
-        assert_eq!(column, RleColumn::compress(&[]), "Unpacking column with no ranges");
+        assert_eq!(
+            column,
+            RleColumn::compress(&[]),
+            "Unpacking column with no ranges"
+        );
     }
 
     #[test]
@@ -613,7 +663,11 @@ mod tests {
         unsafe {
             column = RleColumn::unpack_from(buffer.as_mut_ptr(), 1, None);
         }
-        assert_eq!(column, RleColumn::compress(&[RgbVoxel::empty()]), "Unpacking column with single range");
+        assert_eq!(
+            column,
+            RleColumn::compress(&[RgbVoxel::empty()]),
+            "Unpacking column with single range"
+        );
     }
 
     #[test]
@@ -624,7 +678,11 @@ mod tests {
         unsafe {
             column = RleColumn::unpack_from(buffer.as_mut_ptr(), 1, Some(RleRange::range(1, 0)));
         }
-        assert_eq!(column.optimize(), RleColumn::compress(&[RgbVoxel::empty(), RgbVoxel::empty()]), "Unpacking column with single range");
+        assert_eq!(
+            column.optimize(),
+            RleColumn::compress(&[RgbVoxel::empty(), RgbVoxel::empty()]),
+            "Unpacking column with single range"
+        );
     }
 
     #[test]
@@ -635,7 +693,11 @@ mod tests {
         unsafe {
             column = RleColumn::unpack_from(buffer.as_mut_ptr(), 1, None);
         }
-        assert_eq!(column, RleColumn::compress(&[RgbVoxel::only_green(1)]), "Unpacking column with single range");
+        assert_eq!(
+            column,
+            RleColumn::compress(&[RgbVoxel::only_green(1)]),
+            "Unpacking column with single range"
+        );
     }
 
     #[test]
@@ -646,18 +708,34 @@ mod tests {
         unsafe {
             column = RleColumn::unpack_from(buffer.as_mut_ptr(), 0, Some(RleRange::range(0, 2)));
         }
-        assert_eq!(column, RleColumn::compress(&[RgbVoxel::only_red(1), RgbVoxel::only_red(1)]), "Unpacking column with single range");
+        assert_eq!(
+            column,
+            RleColumn::compress(&[RgbVoxel::only_red(1), RgbVoxel::only_red(1)]),
+            "Unpacking column with single range"
+        );
     }
 
     #[test]
     fn unpack_from_test_simple04() {
-        let mut buffer = vec![1, 0b00001000, 0b00000001, 0, 0b00000001, 0, 0b00100000, 0, 0b00100000, 0];
+        let mut buffer = vec![
+            1, 0b00001000, 0b00000001, 0, 0b00000001, 0, 0b00100000, 0, 0b00100000, 0,
+        ];
         let column;
 
         unsafe {
             column = RleColumn::unpack_from(buffer.as_mut_ptr(), 1, Some(RleRange::range(0, 2)));
         }
-        assert_eq!(column, RleColumn::compress(&[RgbVoxel::only_red(1), RgbVoxel::only_red(1), RgbVoxel::empty(), RgbVoxel::only_green(1), RgbVoxel::only_green(1)]), "Unpacking column with two range");
+        assert_eq!(
+            column,
+            RleColumn::compress(&[
+                RgbVoxel::only_red(1),
+                RgbVoxel::only_red(1),
+                RgbVoxel::empty(),
+                RgbVoxel::only_green(1),
+                RgbVoxel::only_green(1)
+            ]),
+            "Unpacking column with two range"
+        );
     }
 
     #[test]

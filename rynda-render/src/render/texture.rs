@@ -1,6 +1,5 @@
-
 use gl::types::*;
-use std::{ptr, mem};
+use std::{mem, ptr};
 
 pub unsafe fn create_texture(
     unit: GLenum,
