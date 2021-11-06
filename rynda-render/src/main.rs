@@ -5,7 +5,7 @@ use gl::types::*;
 use glfw::{Action, Context, Key};
 use ndarray::{Array3};
 use std::os::raw::c_void;
-use std::{mem, ptr, str};
+use std::{ptr, str};
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
@@ -22,90 +22,6 @@ use rynda_render::render::{
 // Vertex data
 static POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
 static INDEX_DATA: [GLshort; 4] = [1, 2, 0, 3];
-
-// Compute shader sources
-static COMPUTE_SRC: &str = "
-#version 440 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
-
-uniform uvec3 volume_size;
-uniform int mode;
-
-struct PointerColumn{
-    uint pointer;
-    uint fields; // unpacked fields
-};
-
-layout (shared, binding = 0) readonly buffer InputData {
-    PointerColumn columns[];
-};
-
-layout (rgba8, binding = 1) uniform image2D img_output;
-
-uint rle_count(uint fields) {
-    return fields & 0xFFFF;
-}
-
-uint skipped(uint fields) {
-    return (fields >> 16) & 0x3FF;
-}
-
-uint drawn(uint fields) {
-    return (fields >> 26) & 0x3F;
-}
-
-uint flat_index(uvec2 pos)
-{
-    return pos.x + pos.y * volume_size.x;
-}
-
-void main() {
-    uvec2 cell_coord = uvec2(gl_GlobalInvocationID.xy);
-
-    vec4 pixel = vec4(0.0, 0.0, 0.0, 1.0);
-    
-    PointerColumn pcol = columns[flat_index(cell_coord)];
-    float height = 0.0; 
-    
-    if (mode == 0) {
-        height = float(drawn(pcol.fields)) / float(volume_size.y);
-    } else {
-        height = float(skipped(pcol.fields)) / float(volume_size.y);
-    }
-    
-    pixel.r = height;
-    pixel.g = height;
-    pixel.b = height;
-
-    imageStore(img_output, ivec2(cell_coord), pixel);
-}
-";
-
-// Shader sources
-static VS_SRC: &str = "
-#version 150
-in vec2 position;
-out vec2 tex_coords;
-
-const vec2 madd=vec2(0.5,0.5);
-
-void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-    vec2 tex_pos = position.xy;
-    tex_pos.y *= -1;
-    tex_coords = tex_pos.xy*madd+madd;
-}
-";
-
-static FS_SRC: &str = "
-#version 150
-uniform sampler2D img_output;
-in vec2 tex_coords;
-out vec4 f_color;
-
-void main() {
-    f_color = texture(img_output, tex_coords);
-}";
 
 extern "system" fn debug_print(
     _source: GLenum,
@@ -159,9 +75,9 @@ fn main() {
     }
 
     // Create GLSL shaders
-    let vs = Shader::compile(ShaderType::Vertex, VS_SRC);
-    let fs = Shader::compile(ShaderType::Fragment, FS_SRC);
-    let cs = Shader::compile(ShaderType::Compute, COMPUTE_SRC);
+    let vs = Shader::compile(ShaderType::Vertex, str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap());
+    let fs = Shader::compile(ShaderType::Fragment, str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap());
+    let cs = Shader::compile(ShaderType::Compute, str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap());
     let program = ShaderProgram::link(vec![vs, fs]);
     let compute_program = ShaderProgram::link(vec![cs]);
 
@@ -185,9 +101,9 @@ fn main() {
     let output_tex = Texture::new(gl::TEXTURE1, image_dimensions.0, image_dimensions.1, None);
 
     // Create Vertex Array Object
-    let vao = VertexArray::new();
+    let _vao = VertexArray::new();
     // Create a Vertex Buffer Object and copy the vertex data to it
-    let vbo: VertexBuffer<GLfloat> = VertexBuffer::new(&POSITION_DATA);
+    let _vbo: VertexBuffer<GLfloat> = VertexBuffer::new(&POSITION_DATA);
     // Create buffer for indecies and fill data to it
     let ebo: IndexBuffer<GLshort> = IndexBuffer::new(PrimitiveType::TriangleStrip, &INDEX_DATA);
 
