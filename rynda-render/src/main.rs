@@ -3,7 +3,7 @@ extern crate glfw;
 
 use gl::types::*;
 use glfw::{Action, Context, Key};
-use ndarray::{arr3, Array3};
+use ndarray::{Array3};
 use std::os::raw::c_void;
 use std::{mem, ptr, str};
 
@@ -11,7 +11,7 @@ use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
     buffer::ShaderBuffer,
     shader::{ShaderType, Shader, ShaderProgram},
-    texture::create_texture,
+    texture::Texture,
 };
 
 // Vertex data
@@ -103,13 +103,13 @@ void main() {
 }";
 
 extern "system" fn debug_print(
-    source: GLenum,
+    _source: GLenum,
     gltype: GLenum,
-    id: GLuint,
+    _id: GLuint,
     severity: GLenum,
     length: GLsizei,
     message: *const GLchar,
-    userParam: *mut c_void,
+    _user_param: *mut c_void,
 ) {
     let msg: &str = unsafe {
         std::str::from_utf8(std::slice::from_raw_parts(
@@ -175,9 +175,9 @@ fn main() {
     });
     let volume: RleVolume = voxels.into();
 
-    let pointmap_buffer;
-    let image_dimensions = (volume.xsize, volume.zsize); // image.dimensions();
-    let output_tex_id;
+    let pointmap_buffer = ShaderBuffer::from_pointermap(&volume);
+    let image_dimensions = (volume.xsize, volume.zsize);
+    let output_tex = Texture::new(gl::TEXTURE1, image_dimensions.0, image_dimensions.1, None);
 
     let mut vao = 0;
     let mut eab = 0;
@@ -186,9 +186,6 @@ fn main() {
     let mode_id;
 
     unsafe {
-        pointmap_buffer = ShaderBuffer::from_pointermap(&volume);
-        output_tex_id = create_texture(gl::TEXTURE1, image_dimensions.0, image_dimensions.1, None);
-
         // Create Vertex Array Object
         gl::GenVertexArrays(1, &mut vao);
         gl::BindVertexArray(vao);
@@ -236,7 +233,7 @@ fn main() {
         // Bind output texture in Texture Unit 1
         program.use_program();
         gl::ActiveTexture(gl::TEXTURE1);
-        gl::BindTexture(gl::TEXTURE_2D, output_tex_id as GLuint);
+        gl::BindTexture(gl::TEXTURE_2D, output_tex.id);
 
         // Set our "texture" sampler to use Texture Unit 1
         let output_tex_id = program.uniform_location("img_output");
@@ -259,7 +256,7 @@ fn main() {
             gl::Uniform1i(mode_id, mode as i32);
             gl::BindImageTexture(
                 1,
-                output_tex_id as GLuint,
+                output_tex.id as GLuint,
                 0,
                 gl::FALSE,
                 0,
@@ -290,7 +287,6 @@ fn main() {
         gl::DeleteBuffers(1, &vbo);
         gl::DeleteVertexArrays(1, &vao);
         gl::DeleteBuffers(1, &eab);
-        gl::DeleteTextures(1, &output_tex_id);
     }
 }
 
