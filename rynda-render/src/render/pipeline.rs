@@ -30,9 +30,9 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-    pub fn new(compute_shader: &str, volume: &RleVolume) -> Self {
+    pub fn new(vertex_shader: &str, fragment_shader: &str, compute_shader: &str, volume: &RleVolume) -> Self {
 
-        let vs = Shader::compile(ShaderType::Vertex, str::from_utf8(include_bytes!("../../shaders/quad_vertex.glsl")).unwrap());
+        let vs = Shader::compile(ShaderType::Vertex, vertex_shader);
         let fs = Shader::compile(ShaderType::Fragment, str::from_utf8(include_bytes!("../../shaders/quad_fragment.glsl")).unwrap());
         let cs = Shader::compile(ShaderType::Compute, compute_shader);
         let program = ShaderProgram::link(vec![vs, fs]);
@@ -89,8 +89,8 @@ impl Pipeline {
         where F: FnMut()
     {
         unsafe {
-            // Clear the screen to black
-            gl::ClearColor(0.3, 0.3, 0.3, 1.0);
+            // Clear the screen
+            gl::ClearColor(1.0, 1.0, 1.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
             // Compute next state of game

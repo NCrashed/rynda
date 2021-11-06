@@ -46,8 +46,10 @@ fn main() {
     });
     let volume: RleVolume = voxels.into();
 
-    let compute_shader = str::from_utf8(&include_bytes!("../shaders/pointermap_compute.glsl")[..]).unwrap();
-    let pipeline = Pipeline::new(compute_shader, &volume);
+    let vertex_shader = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
+    let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
+    let compute_shader = str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
+    let pipeline = Pipeline::new(vertex_shader, fragment_shader, compute_shader, &volume);
 
     let mode_id = pipeline.compute_program.uniform_location("mode");
 

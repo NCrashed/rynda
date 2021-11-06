@@ -18,7 +18,8 @@ path = "src/main.rs"
 
 [dependencies]
 gl = "0.6.0"
+glam = "0.20.0"
 glfw = "0.42.0"
 image = "0.23.14"
-rynda-format = { path = "../rynda-format" }
 ndarray = "0.15.3"
+rynda-format = { path = "../rynda-format" }

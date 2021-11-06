@@ -9,7 +9,10 @@ use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
     pipeline::Pipeline,
     debug::enable_gl_debug,
+    camera::Camera,
 };
+
+use glam::{Vec3, Mat4};
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -46,10 +49,14 @@ fn main() {
     });
     let volume: RleVolume = voxels.into();
 
-    let compute_shader = str::from_utf8(&include_bytes!("../shaders/pointermap_compute.glsl")[..]).unwrap();
-    let pipeline = Pipeline::new(compute_shader, &volume);
+    let vertex_shader = str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
+    let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
+    let compute_shader = str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
+    let pipeline = Pipeline::new(vertex_shader, fragment_shader, compute_shader, &volume);
 
     let mode_id = pipeline.compute_program.uniform_location("mode");
+    let mvp_id = pipeline.quad_program.uniform_location("MVP");
+    let mut camera = Camera::look_at(Vec3::new(-15.5, 0.0, -10.0), Vec3::ZERO);
 
     let mut mode: u32 = 0;
     while !window.should_close() {
@@ -61,6 +68,12 @@ fn main() {
         unsafe {
             pipeline.draw(|| {
                 gl::Uniform1i(mode_id, mode as i32);
+                let mvp = camera.matrix();
+                // println!("{}", mvp);
+                // let mvp = Mat4::from_translation(Vec3::new(0.0, 0.5, 0.0));
+                pipeline.quad_program.use_program();
+                gl::UniformMatrix4fv(mvp_id, 1, gl::FALSE, mvp.as_ref().as_ptr());
+                pipeline.compute_program.use_program();
             });
         }
         window.swap_buffers();
