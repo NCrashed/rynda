@@ -12,8 +12,9 @@ use rynda_render::render::{
     buffer::{
         shader::ShaderBuffer,
         vertex::VertexBuffer,
-        index::IndexBuffer,
+        index::{PrimitiveType, IndexBuffer},
     },
+    array::vertex::VertexArray,
     shader::{ShaderType, Shader, ShaderProgram},
     texture::Texture,
 };
@@ -183,23 +184,16 @@ fn main() {
     let image_dimensions = (volume.xsize, volume.zsize);
     let output_tex = Texture::new(gl::TEXTURE1, image_dimensions.0, image_dimensions.1, None);
 
-    let mut vao = 0;
-    let ebo: IndexBuffer<GLshort>;
-    let vbo: VertexBuffer<GLfloat>;
+    // Create Vertex Array Object
+    let vao = VertexArray::new();
+    // Create a Vertex Buffer Object and copy the vertex data to it
+    let vbo: VertexBuffer<GLfloat> = VertexBuffer::new(&POSITION_DATA);
+    // Create buffer for indecies and fill data to it
+    let ebo: IndexBuffer<GLshort> = IndexBuffer::new(PrimitiveType::TriangleStrip, &INDEX_DATA);
 
     let mode_id;
 
     unsafe {
-        // Create Vertex Array Object
-        gl::GenVertexArrays(1, &mut vao);
-        gl::BindVertexArray(vao);
-
-        // Create a Vertex Buffer Object and copy the vertex data to it
-        vbo = VertexBuffer::new(&POSITION_DATA);
-
-        // Create buffer for indecies and fill data to it
-        ebo = IndexBuffer::new(&INDEX_DATA);
-
         // Use shader program
         program.use_program();
 
@@ -214,14 +208,8 @@ fn main() {
             0,
             ptr::null(),
         );
-
-        // Bind input buffer
-        compute_program.use_program();
-        let volume_size_id = compute_program.uniform_location("volume_size");
-        gl::Uniform3ui(volume_size_id, volume.xsize, volume.ysize, volume.zsize);
         
         // Bind output texture in Texture Unit 1
-        program.use_program();
         gl::ActiveTexture(gl::TEXTURE1);
         gl::BindTexture(gl::TEXTURE_2D, output_tex.id);
 
@@ -230,6 +218,11 @@ fn main() {
         gl::Uniform1i(output_tex_id, 1);
 
         mode_id = compute_program.uniform_location("mode");
+
+        // Bind input buffer
+        compute_program.use_program();
+        let volume_size_id = compute_program.uniform_location("volume_size");
+        gl::Uniform3ui(volume_size_id, volume.xsize, volume.ysize, volume.zsize);
     }
 
     let mut mode: u32 = 0;
@@ -240,6 +233,10 @@ fn main() {
         }
 
         unsafe {
+            // Clear the screen to black
+            gl::ClearColor(0.3, 0.3, 0.3, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+
             // Compute next state of game
             compute_program.use_program();
             pointmap_buffer.bind(0);
@@ -254,27 +251,13 @@ fn main() {
                 gl::RGBA8,
             );
             gl::DispatchCompute(image_dimensions.0, image_dimensions.1, 1);
-            gl::BindBuffer(gl::SHADER_STORAGE_BUFFER, 0);
             gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
 
-            // Clear the screen to black
-            program.use_program();
-            gl::ClearColor(0.3, 0.3, 0.3, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-
             // Draw a quad from the two triangles
-            gl::DrawElements(
-                gl::TRIANGLE_STRIP,
-                INDEX_DATA.len() as GLint,
-                gl::UNSIGNED_SHORT,
-                ptr::null(),
-            );
+            program.use_program();
+            ebo.draw();
         }
         window.swap_buffers();
-    }
-
-    unsafe {
-        gl::DeleteVertexArrays(1, &vao);
     }
 }
 

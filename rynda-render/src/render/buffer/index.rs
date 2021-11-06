@@ -1,6 +1,38 @@
 use gl::types::*;
-use std::mem;
+use std::{mem, ptr};
 use std::marker::PhantomData;
+
+pub enum PrimitiveType {
+    Points, 
+    LineStrip, 
+    LineLoop, 
+    Lines, 
+    LineStripAdjacency, 
+    LinesAdjacency, 
+    Triangles, 
+    TrianglesAdjacency, 
+    TriangleFan, 
+    TriangleStrip, 
+    TriangleStripAdjacency,
+    Patches,
+}
+
+pub fn primitive_type_id(value: PrimitiveType) -> GLenum {
+    match value {
+        PrimitiveType::Points => gl::POINTS, 
+        PrimitiveType::LineStrip => gl::LINE_STRIP, 
+        PrimitiveType::LineLoop => gl::LINE_LOOP, 
+        PrimitiveType::Lines => gl::LINES, 
+        PrimitiveType::LineStripAdjacency => gl::LINE_STRIP_ADJACENCY, 
+        PrimitiveType::LinesAdjacency => gl::LINES_ADJACENCY, 
+        PrimitiveType::Triangles => gl::TRIANGLES, 
+        PrimitiveType::TrianglesAdjacency => gl::TRIANGLES_ADJACENCY, 
+        PrimitiveType::TriangleFan => gl::TRIANGLE_FAN, 
+        PrimitiveType::TriangleStrip => gl::TRIANGLE_STRIP, 
+        PrimitiveType::TriangleStripAdjacency => gl::TRIANGLE_STRIP_ADJACENCY,
+        PrimitiveType::Patches => gl::PATCHES,
+    }
+}
 
 /// A Index Buffer Objects (IBO)
 pub struct IndexBuffer<T> {
@@ -10,10 +42,12 @@ pub struct IndexBuffer<T> {
     pub id: GLuint,
     /// Number of elements in the index buffer
     pub length: usize, 
+    /// Which primivitive to draw
+    pub primitive: PrimitiveType,
 }
 
 impl<T> IndexBuffer<T> {
-    pub fn new(data: &[T]) -> Self {
+    pub fn new(primitive: PrimitiveType, data: &[T]) -> Self {
         let mut ebo = 0;
         unsafe {
             gl::GenBuffers(1, &mut ebo);
@@ -25,7 +59,7 @@ impl<T> IndexBuffer<T> {
                 gl::STATIC_DRAW,
             );
         }
-        IndexBuffer { phantom: PhantomData, id: ebo, length: data.len() }
+        IndexBuffer { phantom: PhantomData, id: ebo, length: data.len(), primitive }
     }
 
     pub fn bind(&self) {
@@ -39,6 +73,19 @@ impl<T> Drop for IndexBuffer<T> {
     fn drop(&mut self) {
         unsafe {
             gl::DeleteBuffers(1, &self.id);
+        }
+    }
+}
+
+impl IndexBuffer<GLshort> {
+    pub fn draw(&self) {
+        unsafe {
+            gl::DrawElements(
+                gl::TRIANGLE_STRIP,
+                self.length as GLint,
+                gl::UNSIGNED_SHORT,
+                ptr::null(),
+            );
         }
     }
 }
