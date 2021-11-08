@@ -141,20 +141,21 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, ctx:
                 ctx.mode = 0;
             }
         }
-        glfw::WindowEvent::Key(Key::Up, _, state, _) => {
+        glfw::WindowEvent::Key(Key::Up | Key::W, _, state, _) => {
             ctx.up = state != Action::Release;
         }
-        glfw::WindowEvent::Key(Key::Down, _, state, _) => {
+        glfw::WindowEvent::Key(Key::Down | Key::S, _, state, _) => {
             ctx.down = state != Action::Release;
         }
-        glfw::WindowEvent::Key(Key::Left, _, state, _) => {
+        glfw::WindowEvent::Key(Key::Left | Key::A, _, state, _) => {
             ctx.left = state != Action::Release;
         }
-        glfw::WindowEvent::Key(Key::Right, _, state, _) => {
+        glfw::WindowEvent::Key(Key::Right | Key::D, _, state, _) => {
             ctx.right = state != Action::Release;
         }
         glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
             gl::Viewport(0, 0, width, height);
+            camera.aspect = width as f32 / height as f32;
         },
         glfw::WindowEvent::CursorPos(cx, cy) => {
             let dx = (cx - ctx.old_cx) * MOUSE_ROTATION_SPEED;

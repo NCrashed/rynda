@@ -12,7 +12,7 @@ use rynda_render::render::{
     camera::Camera,
 };
 
-use glam::{Vec3};
+use glam::{Vec3, Mat4};
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -21,7 +21,7 @@ fn main() {
         .create_window(
             1024,
             1024,
-            "Rynda pointmap test",
+            "Rynda debug boundaries test",
             glfw::WindowMode::Windowed,
         )
         .expect("Failed to create GLFW window.");
@@ -58,7 +58,8 @@ fn main() {
 
     let mode_id = pipeline.compute_program.uniform_location("mode");
     let mvp_id = pipeline.quad_program.uniform_location("MVP");
-    let mut camera = Camera::look_at(Vec3::new(-15.5, 0.0, -10.0), Vec3::ZERO);
+    let mut camera = Camera::look_at(Vec3::new(0.0, 5.0, -10.0), Vec3::ZERO);
+    let mut debug_camera = Camera::look_at(Vec3::new(-15.5, 0.0, -10.0), Vec3::ZERO);
 
     let (cx0, cy0) = window.get_cursor_pos();
     let mut events_ctx = EventContext::default();
@@ -66,18 +67,17 @@ fn main() {
     events_ctx.old_cy = cy0;
 
     while !window.should_close() {
+        let active_camera = if events_ctx.mode == 0 { &mut debug_camera } else { &mut camera };
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event, &mut events_ctx, &mut camera);
+            handle_window_event(&mut window, event, &mut events_ctx, active_camera);
         }
-        events_ctx.move_camera(&mut camera);
+        events_ctx.move_camera(active_camera);
 
         unsafe {
             pipeline.draw(|| {
                 gl::Uniform1i(mode_id, events_ctx.mode as i32);
-                let mvp = camera.matrix();
-                // println!("{}", mvp);
-                // let mvp = Mat4::from_translation(Vec3::new(0.0, 0.5, 0.0));
+                let mvp = if events_ctx.mode == 0 { debug_camera.matrix() } else { Mat4::IDENTITY };
                 pipeline.quad_program.use_program();
                 gl::UniformMatrix4fv(mvp_id, 1, gl::FALSE, mvp.as_ref().as_ptr());
                 pipeline.compute_program.use_program();
@@ -141,20 +141,21 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, ctx:
                 ctx.mode = 0;
             }
         }
-        glfw::WindowEvent::Key(Key::Up, _, state, _) => {
+        glfw::WindowEvent::Key(Key::Up | Key::W, _, state, _) => {
             ctx.up = state != Action::Release;
         }
-        glfw::WindowEvent::Key(Key::Down, _, state, _) => {
+        glfw::WindowEvent::Key(Key::Down | Key::S, _, state, _) => {
             ctx.down = state != Action::Release;
         }
-        glfw::WindowEvent::Key(Key::Left, _, state, _) => {
+        glfw::WindowEvent::Key(Key::Left | Key::A, _, state, _) => {
             ctx.left = state != Action::Release;
         }
-        glfw::WindowEvent::Key(Key::Right, _, state, _) => {
+        glfw::WindowEvent::Key(Key::Right | Key::D, _, state, _) => {
             ctx.right = state != Action::Release;
         }
         glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
             gl::Viewport(0, 0, width, height);
+            camera.aspect = width as f32 / height as f32;
         },
         glfw::WindowEvent::CursorPos(cx, cy) => {
             let dx = (cx - ctx.old_cx) * MOUSE_ROTATION_SPEED;
