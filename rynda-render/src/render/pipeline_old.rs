@@ -12,13 +12,22 @@ use super::{
     shader::{ShaderType, Shader, ShaderProgram},
     texture::Texture,
 };
+use glam::Vec3;
 
-static QUAD_POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
-static QUAD_INDEX_DATA: [GLshort; 4] = [1, 2, 0, 3];
+pub trait Pipeline {
+    /// Bind to OpenGL state and prepare for render
+    fn bind(&self);
+
+    /// Perform drawing call
+    fn draw(&self);
+}
+
+
 
 pub struct Pipeline {
     pub compute_program: ShaderProgram,
     pub quad_program: ShaderProgram,
+    pub debug_program: ShaderProgram,
     pub output_tex: Texture,
 
     pub vao: VertexArray,
@@ -26,7 +35,9 @@ pub struct Pipeline {
     pub ebo: IndexBuffer<GLshort>,
     pub image_dimensions: (u32, u32),
 
-    pointmap_buffer: ShaderBuffer<PointerColumn>,
+    pub pointmap_buffer: ShaderBuffer<PointerColumn>,
+
+    pub debug_lines: Vec<(Vec3, Vec3, Vec3)>,
 }
 
 impl Pipeline {
@@ -35,9 +46,12 @@ impl Pipeline {
         let vs = Shader::compile(ShaderType::Vertex, vertex_shader);
         let fs = Shader::compile(ShaderType::Fragment, fragment_shader);
         let cs = Shader::compile(ShaderType::Compute, compute_shader);
+        let dvs = Shader::compile(ShaderType::Vertex, str::from_utf8(include_bytes!("../../shaders/debug_vertex.glsl")).unwrap());
+        let dfs = Shader::compile(ShaderType::Fragment, str::from_utf8(include_bytes!("../../shaders/debug_fragment.glsl")).unwrap());
         let program = ShaderProgram::link(vec![vs, fs]);
         let compute_program = ShaderProgram::link(vec![cs]);
-    
+        let debug_program = ShaderProgram::link(vec![dvs, dfs]);
+
         let output_tex = Texture::new(gl::TEXTURE1, volume.xsize, volume.zsize, None);
 
         let vao = VertexArray::new();
@@ -77,10 +91,12 @@ impl Pipeline {
         Pipeline {
             compute_program,
             quad_program: program, 
+            debug_program,
             output_tex,
             vao, vbo, ebo, 
             image_dimensions: (volume.xsize, volume.zsize),
             pointmap_buffer,
+            debug_lines: vec![],
         }
     }
 

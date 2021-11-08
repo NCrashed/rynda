@@ -1,6 +1,6 @@
 use gl::types::*;
-use std::mem;
 use std::marker::PhantomData;
+use std::mem;
 
 /// A Vertex Buffer Object (VBO)
 pub struct VertexBuffer<T> {
@@ -23,7 +23,10 @@ impl<T> VertexBuffer<T> {
                 gl::STATIC_DRAW,
             );
         }
-        VertexBuffer { phantom: PhantomData, id: vbo }
+        VertexBuffer {
+            phantom: PhantomData,
+            id: vbo,
+        }
     }
 
     pub fn bind(&self) {

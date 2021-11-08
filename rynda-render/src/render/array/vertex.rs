@@ -30,3 +30,9 @@ impl Drop for VertexArray {
         }
     }
 }
+
+impl Default for VertexArray {
+    fn default() -> Self {
+        Self::new()
+    }
+}

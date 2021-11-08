@@ -2,13 +2,13 @@ extern crate gl;
 extern crate glfw;
 
 use glfw::{Action, Context, Key};
-use ndarray::{Array3};
+use ndarray::Array3;
 use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
-    pipeline::Pipeline,
     debug::enable_gl_debug,
+    pipeline::{generic::Pipeline, quad::QuadPipeline, raycast::RaycastPipeline},
 };
 
 fn main() {
@@ -48,10 +48,13 @@ fn main() {
 
     let vertex_shader = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
     let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
-    let compute_shader = str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
-    let pipeline = Pipeline::new(vertex_shader, fragment_shader, compute_shader, &volume);
+    let compute_shader =
+        str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
+    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
+    let quad_pipeline =
+        QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
 
-    let mode_id = pipeline.compute_program.uniform_location("mode");
+    let mode_id = raycast_pipeline.program.uniform_location("mode");
 
     let mut mode: u32 = 0;
     while !window.should_close() {
@@ -61,10 +64,18 @@ fn main() {
         }
 
         unsafe {
-            pipeline.draw(|| {
-                gl::Uniform1i(mode_id, mode as i32);
-            });
+            // Clear the screen
+            gl::ClearColor(1.0, 1.0, 1.0, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
         }
+
+        raycast_pipeline.bind();
+        unsafe {
+            gl::Uniform1i(mode_id, mode as i32);
+        }
+        raycast_pipeline.draw();
+        quad_pipeline.bind_draw();
+
         window.swap_buffers();
     }
 }
