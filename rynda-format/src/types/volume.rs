@@ -44,9 +44,6 @@ impl RleVolume {
     /// Construct volume with no voxels with given size. `ysize` is up direction
     pub fn empty(xsize: usize, ysize: usize, zsize: usize) -> Self {
         // Restrict them to be power of two to allow easy mipmapping
-        assert!(xsize == 0 || is_power2(xsize), "xsize is not power of two!");
-        assert!(ysize == 0 || is_power2(ysize), "ysize is not power of two!");
-        assert!(zsize == 0 || is_power2(zsize), "zsize is not power of two!");
         assert!(
             xsize < 1024,
             "xsize of RleVolume is bigger than or equal to 1024!"
@@ -86,18 +83,10 @@ impl RleVolume {
     }
 }
 
-/// Trick to check whether the number is power of two. Zero is counted as true.
-fn is_power2(x: usize) -> bool {
-    (x != 0) && (x & (x - 1)) == 0
-}
-
 impl From<Array3<RgbVoxel>> for RleVolume {
     fn from(array: Array3<RgbVoxel>) -> Self {
         let (xsize, ysize, zsize) = array.dim();
-        // Restrict them to be power of two to allow easy mipmapping
-        assert!(xsize == 0 || is_power2(xsize), "xsize is not power of two!");
-        assert!(ysize == 0 || is_power2(ysize), "ysize is not power of two!");
-        assert!(zsize == 0 || is_power2(zsize), "zsize is not power of two!");
+
         assert!(
             xsize < 1024,
             "xsize of RleVolume is bigger than or equal to 1024!"
