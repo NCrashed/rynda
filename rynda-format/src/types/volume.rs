@@ -66,7 +66,7 @@ impl RleVolume {
             pointers =
                 alloc(Layout::array::<PointerColumn>(num_pointers).unwrap()) as *mut PointerColumn;
             for i in 0..num_pointers {
-                let point = pointers.offset(i as isize);
+                let point = pointers.add(i);
                 *point = PointerColumn {
                     pointer: 0,
                     rle_count: 0,
@@ -127,7 +127,7 @@ impl From<Array3<RgbVoxel>> for RleVolume {
                     .remove_axis(Axis(0));
                 let rle_col = RleColumn::compress(&column.to_vec());
                 let (first_range, rest_column) = rle_col.split_head().unwrap();
-                let point = pointers.offset(i as isize);
+                let point = pointers.add(i);
                 let rle_count = rest_column.intervals_count();
                 assert!(
                     rle_count < 65536,
@@ -150,7 +150,7 @@ impl From<Array3<RgbVoxel>> for RleVolume {
         unsafe {
             columns_array = alloc(Layout::array::<u8>(columns_offset).unwrap());
             for c in columns {
-                let start = columns_array.offset(offset as isize);
+                let start = columns_array.add(offset);
                 offset += c.pack_into(start);
             }
         }
@@ -167,28 +167,28 @@ impl From<Array3<RgbVoxel>> for RleVolume {
     }
 }
 
-impl Into<Array3<RgbVoxel>> for RleVolume {
-    fn into(self) -> Array3<RgbVoxel> {
+impl From<RleVolume> for Array3<RgbVoxel> {
+    fn from(volume: RleVolume) -> Array3<RgbVoxel> {
         let mut arr = Array3::zeros((
-            self.xsize as usize,
-            self.ysize as usize,
-            self.zsize as usize,
+            volume.xsize as usize,
+            volume.ysize as usize,
+            volume.zsize as usize,
         ));
 
         unsafe {
-            let num_pointers = (self.xsize * self.zsize) as usize;
+            let num_pointers = (volume.xsize * volume.zsize) as usize;
             for i in 0..num_pointers {
-                let x = i % (self.xsize as usize);
-                let z = i / (self.zsize as usize);
-                let pcol = (*self.pointers.offset(i as isize)).clone();
+                let x = i % (volume.xsize as usize);
+                let z = i / (volume.zsize as usize);
+                let pcol = &*volume.pointers.add(i);
                 let col = RleColumn::unpack_from(
-                    self.columns.offset(pcol.pointer as isize),
+                    volume.columns.offset(pcol.pointer as isize),
                     pcol.rle_count as usize,
                     Some(pcol.first_range),
                 );
 
                 for (y, color) in col.decompress().iter().enumerate() {
-                    arr[(x, y, z)] = color.clone();
+                    arr[(x, y, z)] = *color;
                 }
             }
         }
@@ -204,36 +204,36 @@ mod tests {
 
     #[test]
     fn empty_volumes() {
-        let volume1 = RleVolume::empty(1, 1, 1);
-        let volume2 = RleVolume::empty(2, 2, 2);
-        let volume4 = RleVolume::empty(4, 4, 4);
-        let volume8 = RleVolume::empty(8, 8, 8);
-        let volume16 = RleVolume::empty(16, 16, 16);
-        let volume32 = RleVolume::empty(32, 32, 32);
-        let volume64 = RleVolume::empty(64, 64, 64);
-        let volume128 = RleVolume::empty(128, 128, 128);
-        let volume256 = RleVolume::empty(256, 256, 256);
-        let volume512 = RleVolume::empty(512, 512, 512);
+        let _volume1 = RleVolume::empty(1, 1, 1);
+        let _volume2 = RleVolume::empty(2, 2, 2);
+        let _volume4 = RleVolume::empty(4, 4, 4);
+        let _volume8 = RleVolume::empty(8, 8, 8);
+        let _volume16 = RleVolume::empty(16, 16, 16);
+        let _volume32 = RleVolume::empty(32, 32, 32);
+        let _volume64 = RleVolume::empty(64, 64, 64);
+        let _volume128 = RleVolume::empty(128, 128, 128);
+        let _volume256 = RleVolume::empty(256, 256, 256);
+        let _volume512 = RleVolume::empty(512, 512, 512);
     }
 
     #[test]
     fn empty_zero_volume0() {
-        let v = RleVolume::empty(0, 0, 0);
-        let v = RleVolume::empty(1, 0, 0);
-        let v = RleVolume::empty(0, 1, 0);
-        let v = RleVolume::empty(0, 0, 1);
+        let _v = RleVolume::empty(0, 0, 0);
+        let _v = RleVolume::empty(1, 0, 0);
+        let _v = RleVolume::empty(0, 1, 0);
+        let _v = RleVolume::empty(0, 0, 1);
     }
 
     #[test]
     #[should_panic]
     fn empty_invalid_volume4() {
-        let v = RleVolume::empty(1024, 1024, 1024);
+        let _v = RleVolume::empty(1024, 1024, 1024);
     }
 
     #[test]
     #[should_panic]
     fn empty_invalid_volume5() {
-        let v = RleVolume::empty(1024, 512, 1024);
+        let _v = RleVolume::empty(1024, 512, 1024);
     }
 
     fn encode_decode_array(voxels: Array3<RgbVoxel>, descr: &str) {

@@ -24,14 +24,14 @@ impl<'a> RaycastPipeline<'a> {
         let program = ShaderProgram::link(vec![cs]);
 
         let texture = Texture::new(gl::TEXTURE1, volume.xsize, volume.zsize, None);
-        let pointmap_buffer = ShaderBuffer::from_pointermap(&volume);
+        let pointmap_buffer = ShaderBuffer::from_pointermap(volume);
 
         RaycastPipeline {
             program,
             texture,
             image_dimensions: (volume.xsize, volume.zsize),
             pointmap_buffer,
-            volume: volume,
+            volume,
         }
     }
 }

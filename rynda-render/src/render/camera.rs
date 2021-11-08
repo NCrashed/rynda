@@ -79,3 +79,9 @@ impl Camera {
         self.translation += self.right() * (dv as f32);
     }
 }
+
+impl Default for Camera {
+    fn default() -> Self {
+        Self::new()
+    }
+}

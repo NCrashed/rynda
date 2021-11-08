@@ -66,9 +66,11 @@ fn main() {
     let mut debug_camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
     let (cx0, cy0) = window.get_cursor_pos();
-    let mut events_ctx = EventContext::default();
-    events_ctx.old_cx = cx0;
-    events_ctx.old_cy = cy0;
+    let mut events_ctx = EventContext {
+        old_cx: cx0,
+        old_cy: cy0,
+        ..Default::default()
+    };
 
     while !window.should_close() {
         let active_camera = if events_ctx.mode == 0 {

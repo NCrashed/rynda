@@ -29,7 +29,7 @@ impl RleColumn {
                     skipped += 1;
                 } else {
                     drawn = 1;
-                    colors.push(color.clone());
+                    colors.push(*color);
                 }
             } else {
                 if drawn == 63 {
@@ -44,7 +44,7 @@ impl RleColumn {
                     drawn = 0;
                 } else {
                     drawn += 1;
-                    colors.push(color.clone());
+                    colors.push(*color);
                 }
             }
         }
@@ -74,17 +74,20 @@ impl RleColumn {
     }
 
     /// Pack the data of the column inside the given memory chunk. It must by at least `memory_size` length. Returns the size written.
+    ///
+    /// # Safety
+    /// The function expects that memory chunk is big enough to fit [memory_size] bytes.
     pub unsafe fn pack_into(&self, mem: *mut u8) -> usize {
         let mut offset: usize = 0;
         for range in self.ranges.iter() {
-            let ptr = mem.offset(offset as isize);
+            let ptr = mem.add(offset);
             let range_bytes = range.into_bytes();
             let range_len = range_bytes.len();
             ptr.copy_from_nonoverlapping(range_bytes.as_ptr(), range_len);
             offset += range_len;
         }
         for color in self.colors.iter() {
-            let ptr = mem.offset(offset as isize);
+            let ptr = mem.add(offset);
             let color_bytes = color.into_bytes();
             let color_len = color_bytes.len();
             ptr.copy_from_nonoverlapping(color_bytes.as_ptr(), color_len);
@@ -94,6 +97,9 @@ impl RleColumn {
     }
 
     /// Unpack the data of the column from raw memory chunk. It must contain all the column which size depends on rle_count of ranges.
+    ///
+    /// # Safety
+    /// The function expects that the `mem` pointer contains the whole column.
     pub unsafe fn unpack_from(
         mem: *const u8,
         rle_count: usize,
@@ -115,7 +121,7 @@ impl RleColumn {
         };
 
         for i in 0..rle_count {
-            let ptr = mem.offset((i * RLE_RANGE_SIZE) as isize);
+            let ptr = mem.add(i * RLE_RANGE_SIZE);
             let mut range_bytes = [0; 2];
             range_bytes
                 .as_mut_ptr()
@@ -125,8 +131,7 @@ impl RleColumn {
             ranges.push(range);
         }
         for i in 0..drawn {
-            let ptr =
-                mem.offset((rle_count * RLE_RANGE_SIZE + (i as usize) * RGB_VOXEL_SIZE) as isize);
+            let ptr = mem.add(rle_count * RLE_RANGE_SIZE + (i as usize) * RGB_VOXEL_SIZE);
             let mut color_bytes = [0; 2];
             color_bytes
                 .as_mut_ptr()
@@ -145,7 +150,7 @@ impl RleColumn {
 
     /// Return first range and rest column without that range but with it color data
     pub fn split_head(mut self) -> Option<(RleRange, Self)> {
-        if self.ranges.len() == 0 {
+        if self.ranges.is_empty() {
             return None;
         }
 
@@ -650,7 +655,7 @@ mod tests {
         }
         assert_eq!(
             column,
-            RleColumn::compress(&[]),
+            RleColumn::compress(&[RgbVoxel::empty()]),
             "Unpacking column with no ranges"
         );
     }
