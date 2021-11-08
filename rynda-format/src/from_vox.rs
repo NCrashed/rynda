@@ -30,13 +30,17 @@ fn shakal(rgb: u32) -> RgbVoxel {
 pub fn vox_to_rle_volume(filename: &str) -> Result<RleVolume, &str> {
     let data = dot_vox::load(filename)?;
 
-    let mut space = vec![vec![vec![RgbVoxel::empty(); 256]; 256]; 256];
+    let mut space = vec![RgbVoxel::empty(); 256 * 256 * 256];
     for voxel in &data.models[0].voxels {
-        space[voxel.x as usize][voxel.y as usize][voxel.z as usize] =
+        space[metric(voxel.x as usize, voxel.y as usize, voxel.z as usize)] =
             shakal(data.palette[voxel.i as usize]);
     }
 
     Ok(RleVolume::from(Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
-        space[x][y][z]
+        space[metric(x, y, z)]
     })))
+}
+
+fn metric(x: usize, y: usize, z: usize) -> usize {
+    (x * 256 + y) * 256 + z
 }
