@@ -1,4 +1,4 @@
-mod types;
+
 use std::{collections::HashMap};
 
 use dot_vox::{self, DotVoxData, Voxel};
@@ -7,8 +7,9 @@ use modular_bitfield::{
     prelude::{B8},
 };
 use ndarray::{Array3, arr3, array};
-use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
-use rynda_format::types::range::RleRange;
+use super::types::volume::RleVolume;
+use super::types::voxel::RgbVoxel;
+use super::types::range::RleRange;
 
 /// Uncompressed, 32-bit color.
 #[derive(Clone, Copy)]
@@ -26,14 +27,16 @@ fn shakal(rgb: u32) -> RgbVoxel {
     RgbVoxel::rgb(rgb32.red() >> 3, rgb32.green() >> 2, rgb32.blue() >> 3)
 }
 
-fn vox_to_rle_volume(data: DotVoxData) -> RleVolume {
-    let mut space = [[[RgbVoxel::empty(); 256]; 256]; 256];
-    for voxel in data.models[0].voxels {
+pub fn vox_to_rle_volume(filename: &str) -> Result<RleVolume, &str> {
+    let data = dot_vox::load(filename)?;
+
+    let mut space = vec![vec![vec![RgbVoxel::empty(); 256]; 256]; 256];
+    for voxel in &data.models[0].voxels {
         space[voxel.x as usize][voxel.y as usize][voxel.z as usize] =
             shakal(data.palette[voxel.i as usize]);
     }
 
-    RleVolume::from(Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
+    Ok(RleVolume::from(Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
         space[x][y][z]
-    }))
+    })))
 }
