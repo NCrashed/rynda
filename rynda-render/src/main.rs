@@ -39,17 +39,16 @@ fn main() {
     // let z = RgbVoxel::empty();
     // let r = RgbVoxel::only_red(1);
     // let voxels: Array3<RgbVoxel> = arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
-    let voxels = rynda_format::from_vox::vox_to_rle_volume("assets/test_model.vox").unwrap();
-    // let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
-    //     let sx = (x as isize) - 128;
-    //     let sz = (z as isize) - 128;
-    //     let sy = (y as isize) - 256;
-    //     if sx * sx + sz * sz + sy * sy < 64 * 64 {
-    //         RgbVoxel::only_red(1)
-    //     } else {
-    //         RgbVoxel::empty()
-    //     }
-    // });
+    let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
+        let sx = (x as isize) - 128;
+        let sz = (z as isize) - 128;
+        let sy = (y as isize) - 256;
+        if sx * sx + sz * sz + sy * sy < 64 * 64 {
+            RgbVoxel::only_red(1)
+        } else {
+            RgbVoxel::empty()
+        }
+    });
     let volume: RleVolume = voxels.into();
 
     let vertex_shader =

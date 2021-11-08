@@ -527,6 +527,7 @@ dependencies = [
 name = "rynda-render"
 version = "0.1.0"
 dependencies = [
+ "dot_vox",
  "gl",
  "glam",
  "glfw",
