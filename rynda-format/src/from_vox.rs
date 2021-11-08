@@ -1,15 +1,11 @@
+use std::collections::HashMap;
 
-use std::{collections::HashMap};
-
-use dot_vox::{self, DotVoxData, Voxel};
-use modular_bitfield::{
-    bitfield,
-    prelude::{B8},
-};
-use ndarray::{Array3, arr3, array};
+use super::types::range::RleRange;
 use super::types::volume::RleVolume;
 use super::types::voxel::RgbVoxel;
-use super::types::range::RleRange;
+use dot_vox::{self, DotVoxData, Voxel};
+use modular_bitfield::{bitfield, prelude::B8};
+use ndarray::{arr3, array, Array3};
 
 /// Uncompressed, 32-bit color.
 #[derive(Clone, Copy)]
@@ -36,9 +32,10 @@ pub fn vox_to_rle_volume(filename: &str) -> Result<RleVolume, &str> {
             shakal(data.palette[voxel.i as usize]);
     }
 
-    Ok(RleVolume::from(Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
-        space[metric(x, y, z)]
-    })))
+    Ok(RleVolume::from(Array3::from_shape_fn(
+        (256, 256, 256),
+        |(x, y, z)| space[metric(x, y, z)],
+    )))
 }
 
 fn metric(x: usize, y: usize, z: usize) -> usize {
