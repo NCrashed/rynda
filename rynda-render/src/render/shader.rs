@@ -4,14 +4,14 @@ use std::{ptr, str};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ShaderType {
-    Vertex, 
-    Fragment, 
+    Vertex,
+    Fragment,
     Compute,
 }
 
 pub fn shader_type_id(v: ShaderType) -> GLuint {
     match v {
-        ShaderType::Vertex => gl::VERTEX_SHADER, 
+        ShaderType::Vertex => gl::VERTEX_SHADER,
         ShaderType::Fragment => gl::FRAGMENT_SHADER,
         ShaderType::Compute => gl::COMPUTE_SHADER,
     }
@@ -32,11 +32,11 @@ impl Shader {
             let c_str = CString::new(src.as_bytes()).unwrap();
             gl::ShaderSource(shader, 1, &c_str.as_ptr(), ptr::null());
             gl::CompileShader(shader);
-    
+
             // Get the compile status
             let mut status = gl::FALSE as GLint;
             gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut status);
-    
+
             // Fail on error
             if status != (gl::TRUE as GLint) {
                 let mut len = 0;
@@ -55,7 +55,10 @@ impl Shader {
                 );
             }
         }
-        Shader { shader_type, id: shader }
+        Shader {
+            shader_type,
+            id: shader,
+        }
     }
 }
 
@@ -65,7 +68,7 @@ impl Drop for Shader {
             gl::DeleteShader(self.id);
         }
     }
-} 
+}
 
 #[derive(Debug)]
 pub struct ShaderProgram {
@@ -85,7 +88,7 @@ impl ShaderProgram {
             // Get the link status
             let mut status = gl::FALSE as GLint;
             gl::GetProgramiv(program, gl::LINK_STATUS, &mut status);
-    
+
             // Fail on error
             if status != (gl::TRUE as GLint) {
                 let mut len: GLint = 0;
@@ -104,7 +107,10 @@ impl ShaderProgram {
                 );
             }
         }
-        ShaderProgram { id: program, shaders }
+        ShaderProgram {
+            id: program,
+            shaders,
+        }
     }
 
     pub fn use_program(&self) {
@@ -113,20 +119,16 @@ impl ShaderProgram {
         }
     }
 
-    /// Get location of vertex attribute in the program 
+    /// Get location of vertex attribute in the program
     pub fn attr_location(&self, name: &str) -> GLint {
         let name_cstr = CString::new(name).unwrap();
-        unsafe {
-            gl::GetAttribLocation(self.id, name_cstr.as_ptr())
-        }
-    }    
-    
-    /// Get location of uniform in the program 
+        unsafe { gl::GetAttribLocation(self.id, name_cstr.as_ptr()) }
+    }
+
+    /// Get location of uniform in the program
     pub fn uniform_location(&self, name: &str) -> GLint {
         let name_cstr = CString::new(name).unwrap();
-        unsafe {
-            gl::GetUniformLocation(self.id, name_cstr.as_ptr())
-        }
+        unsafe { gl::GetUniformLocation(self.id, name_cstr.as_ptr()) }
     }
 }
 
@@ -136,4 +138,4 @@ impl Drop for ShaderProgram {
             gl::DeleteProgram(self.id);
         }
     }
-} 
+}

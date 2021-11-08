@@ -1,18 +1,18 @@
 extern crate gl;
 extern crate glfw;
 
-use glfw::{Action, Context, Key, CursorMode};
-use ndarray::{Array3};
+use glfw::{Action, Context, CursorMode, Key};
+use ndarray::Array3;
 use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
-    pipeline::Pipeline,
-    debug::enable_gl_debug,
     camera::Camera,
+    debug::enable_gl_debug,
+    pipeline::{generic::Pipeline, quad::QuadPipeline, raycast::RaycastPipeline},
 };
 
-use glam::{Vec3};
+use glam::Vec3;
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -51,14 +51,18 @@ fn main() {
     });
     let volume: RleVolume = voxels.into();
 
-    let vertex_shader = str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
+    let vertex_shader =
+        str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
     let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
-    let compute_shader = str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
-    let pipeline = Pipeline::new(vertex_shader, fragment_shader, compute_shader, &volume);
+    let compute_shader =
+        str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
+    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
+    let quad_pipeline =
+        QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
 
-    let mode_id = pipeline.compute_program.uniform_location("mode");
-    let mvp_id = pipeline.quad_program.uniform_location("MVP");
-    let mut camera = Camera::look_at(Vec3::new(-15.5, 0.0, -10.0), Vec3::ZERO);
+    let mode_id = raycast_pipeline.program.uniform_location("mode");
+    let mvp_id = quad_pipeline.program.uniform_location("MVP");
+    let mut camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
     let (cx0, cy0) = window.get_cursor_pos();
     let mut events_ctx = EventContext::default();
@@ -73,42 +77,50 @@ fn main() {
         events_ctx.move_camera(&mut camera);
 
         unsafe {
-            pipeline.draw(|| {
-                gl::Uniform1i(mode_id, events_ctx.mode as i32);
-                let mvp = camera.matrix();
-                // println!("{}", mvp);
-                // let mvp = Mat4::from_translation(Vec3::new(0.0, 0.5, 0.0));
-                pipeline.quad_program.use_program();
-                gl::UniformMatrix4fv(mvp_id, 1, gl::FALSE, mvp.as_ref().as_ptr());
-                pipeline.compute_program.use_program();
-            });
+            // Clear the screen
+            gl::ClearColor(1.0, 1.0, 1.0, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
         }
+
+        raycast_pipeline.bind();
+        unsafe {
+            gl::Uniform1i(mode_id, events_ctx.mode as i32);
+        }
+        raycast_pipeline.draw();
+
+        quad_pipeline.bind();
+        unsafe {
+            let mvp = camera.matrix();
+            gl::UniformMatrix4fv(mvp_id, 1, gl::FALSE, mvp.as_ref().as_ptr());
+        }
+        quad_pipeline.draw();
+
         window.swap_buffers();
     }
 }
 
-const MOUSE_ROTATION_SPEED: f64 = 0.001; 
-const CAMERA_MOVE_SPEED: f64 = 0.1; 
+const MOUSE_ROTATION_SPEED: f64 = 0.001;
+const CAMERA_MOVE_SPEED: f64 = 0.1;
 
 struct EventContext {
-    pub mode: u32, 
-    pub old_cx: f64, 
+    pub mode: u32,
+    pub old_cx: f64,
     pub old_cy: f64,
-    pub left: bool, 
-    pub right: bool, 
-    pub up: bool, 
+    pub left: bool,
+    pub right: bool,
+    pub up: bool,
     pub down: bool,
 }
 
 impl Default for EventContext {
     fn default() -> Self {
         EventContext {
-            mode: 0, 
-            old_cx: 0., 
+            mode: 0,
+            old_cx: 0.,
             old_cy: 0.,
-            left: false, 
-            right: false, 
-            up: false, 
+            left: false,
+            right: false,
+            up: false,
             down: false,
         }
     }
@@ -131,7 +143,12 @@ impl EventContext {
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, ctx: &mut EventContext, camera: &mut Camera) {
+fn handle_window_event(
+    window: &mut glfw::Window,
+    event: glfw::WindowEvent,
+    ctx: &mut EventContext,
+    camera: &mut Camera,
+) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => window.set_should_close(true),
         glfw::WindowEvent::Key(Key::Space, _, Action::Press, _) => {
@@ -160,10 +177,10 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, ctx:
         glfw::WindowEvent::CursorPos(cx, cy) => {
             let dx = (cx - ctx.old_cx) * MOUSE_ROTATION_SPEED;
             let dy = (cy - ctx.old_cy) * MOUSE_ROTATION_SPEED;
-            camera.update_cursor(dx , dy);
+            camera.update_cursor(dx, dy);
             ctx.old_cx = cx;
             ctx.old_cy = cy;
-        },
+        }
         _ => {}
     }
 }

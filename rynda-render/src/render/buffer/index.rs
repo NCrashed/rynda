@@ -1,34 +1,34 @@
 use gl::types::*;
-use std::{mem, ptr};
 use std::marker::PhantomData;
+use std::{mem, ptr};
 
 pub enum PrimitiveType {
-    Points, 
-    LineStrip, 
-    LineLoop, 
-    Lines, 
-    LineStripAdjacency, 
-    LinesAdjacency, 
-    Triangles, 
-    TrianglesAdjacency, 
-    TriangleFan, 
-    TriangleStrip, 
+    Points,
+    LineStrip,
+    LineLoop,
+    Lines,
+    LineStripAdjacency,
+    LinesAdjacency,
+    Triangles,
+    TrianglesAdjacency,
+    TriangleFan,
+    TriangleStrip,
     TriangleStripAdjacency,
     Patches,
 }
 
 pub fn primitive_type_id(value: PrimitiveType) -> GLenum {
     match value {
-        PrimitiveType::Points => gl::POINTS, 
-        PrimitiveType::LineStrip => gl::LINE_STRIP, 
-        PrimitiveType::LineLoop => gl::LINE_LOOP, 
-        PrimitiveType::Lines => gl::LINES, 
-        PrimitiveType::LineStripAdjacency => gl::LINE_STRIP_ADJACENCY, 
-        PrimitiveType::LinesAdjacency => gl::LINES_ADJACENCY, 
-        PrimitiveType::Triangles => gl::TRIANGLES, 
-        PrimitiveType::TrianglesAdjacency => gl::TRIANGLES_ADJACENCY, 
-        PrimitiveType::TriangleFan => gl::TRIANGLE_FAN, 
-        PrimitiveType::TriangleStrip => gl::TRIANGLE_STRIP, 
+        PrimitiveType::Points => gl::POINTS,
+        PrimitiveType::LineStrip => gl::LINE_STRIP,
+        PrimitiveType::LineLoop => gl::LINE_LOOP,
+        PrimitiveType::Lines => gl::LINES,
+        PrimitiveType::LineStripAdjacency => gl::LINE_STRIP_ADJACENCY,
+        PrimitiveType::LinesAdjacency => gl::LINES_ADJACENCY,
+        PrimitiveType::Triangles => gl::TRIANGLES,
+        PrimitiveType::TrianglesAdjacency => gl::TRIANGLES_ADJACENCY,
+        PrimitiveType::TriangleFan => gl::TRIANGLE_FAN,
+        PrimitiveType::TriangleStrip => gl::TRIANGLE_STRIP,
         PrimitiveType::TriangleStripAdjacency => gl::TRIANGLE_STRIP_ADJACENCY,
         PrimitiveType::Patches => gl::PATCHES,
     }
@@ -41,7 +41,7 @@ pub struct IndexBuffer<T> {
     /// OpenGL id of the buffer
     pub id: GLuint,
     /// Number of elements in the index buffer
-    pub length: usize, 
+    pub length: usize,
     /// Which primivitive to draw
     pub primitive: PrimitiveType,
 }
@@ -59,7 +59,12 @@ impl<T> IndexBuffer<T> {
                 gl::STATIC_DRAW,
             );
         }
-        IndexBuffer { phantom: PhantomData, id: ebo, length: data.len(), primitive }
+        IndexBuffer {
+            phantom: PhantomData,
+            id: ebo,
+            length: data.len(),
+            primitive,
+        }
     }
 
     pub fn bind(&self) {

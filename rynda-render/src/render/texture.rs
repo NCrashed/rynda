@@ -2,16 +2,13 @@ use gl::types::*;
 use std::{mem, ptr};
 
 pub struct Texture {
-    pub id: GLuint
+    pub id: GLuint,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl Texture {
-    pub fn new(
-        unit: GLenum,
-        width: u32,
-        height: u32,
-        image: Option<&image::RgbaImage>,
-    ) -> Self {
+    pub fn new(unit: GLenum, width: u32, height: u32, image: Option<&image::RgbaImage>) -> Self {
         let mut tex_id = 0;
         unsafe {
             gl::GenTextures(1, &mut tex_id);
@@ -42,9 +39,12 @@ impl Texture {
             );
             gl::GenerateMipmap(gl::TEXTURE_2D);
         }
-        Texture { id: tex_id }
+        Texture {
+            id: tex_id,
+            width,
+            height,
+        }
     }
-    
 }
 
 impl Drop for Texture {
