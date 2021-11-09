@@ -1,5 +1,6 @@
 use gl::types::*;
-use std::{ptr, str};
+use std::str;
+use glam::Vec2;
 
 use super::generic::Pipeline;
 use crate::render::{
@@ -52,18 +53,9 @@ impl<'a> Pipeline for QuadPipeline<'a> {
 
         // Use quad program
         self.program.use_program();
-        let pos_attr = self.program.attr_location("position");
+        self.program.bind_attribute::<Vec2>("position", &self.vbo);
+        
         unsafe {
-            gl::EnableVertexAttribArray(pos_attr as GLuint);
-            gl::VertexAttribPointer(
-                pos_attr as GLuint,
-                2,
-                gl::FLOAT,
-                gl::FALSE as GLboolean,
-                0,
-                ptr::null(),
-            );
-
             // Bind output texture in Texture Unit 1
             gl::ActiveTexture(gl::TEXTURE1);
             gl::BindTexture(gl::TEXTURE_2D, self.texture.id);

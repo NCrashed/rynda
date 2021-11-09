@@ -1,6 +1,8 @@
 use gl::types::*;
 use std::ffi::CString;
 use std::{ptr, str};
+use super::buffer::vertex::VertexBuffer;
+use glam::{Vec2, Vec3};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ShaderType {
@@ -70,6 +72,42 @@ impl Drop for Shader {
     }
 }
 
+/// Trait that maps rust types into OpenGL vertex attributes types
+pub trait VertexAttribute {
+    /// Primitive component type of the attribute. E.x. GLfloat
+    type Element;
+
+    /// Count of primitive elements in one attribute value. E.x. 3 for vec3
+    fn elements_count() -> GLint;
+
+    /// ID of type in GL format. E.x. GL_FLOAT
+    fn element_type_id() -> GLuint;
+}
+
+impl VertexAttribute for Vec2 {
+    type Element = GLfloat;
+
+    fn elements_count() -> GLint {
+        2
+    }
+
+    fn element_type_id() -> GLuint {
+        gl::FLOAT
+    }
+}
+
+impl VertexAttribute for Vec3 {
+    type Element = GLfloat;
+
+    fn elements_count() -> GLint {
+        3
+    }
+
+    fn element_type_id() -> GLuint {
+        gl::FLOAT
+    }
+}
+
 #[derive(Debug)]
 pub struct ShaderProgram {
     pub id: GLuint,
@@ -130,6 +168,23 @@ impl ShaderProgram {
         let name_cstr = CString::new(name).unwrap();
         unsafe { gl::GetUniformLocation(self.id, name_cstr.as_ptr()) }
     }
+
+    /// Binding vertex buffer to given attribute in the program
+    pub fn bind_attribute<T: VertexAttribute>(&self, attr_name: &str, buffer: &VertexBuffer<T::Element>) {
+        let attr = self.attr_location(attr_name);
+        unsafe {
+            gl::EnableVertexAttribArray(attr as GLuint);
+            buffer.bind();
+            gl::VertexAttribPointer(
+                attr as GLuint,
+                T::elements_count(),
+                T::element_type_id(),
+                gl::FALSE as GLboolean,
+                0,
+                ptr::null(),
+            );
+        }
+    }
 }
 
 impl Drop for ShaderProgram {
@@ -139,3 +194,4 @@ impl Drop for ShaderProgram {
         }
     }
 }
+
