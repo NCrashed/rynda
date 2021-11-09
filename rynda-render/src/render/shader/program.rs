@@ -57,13 +57,17 @@ impl ShaderProgram {
     /// Get location of vertex attribute in the program
     pub fn attr_location(&self, name: &str) -> GLint {
         let name_cstr = CString::new(name).unwrap();
-        unsafe { gl::GetAttribLocation(self.id, name_cstr.as_ptr()) }
+        let i = unsafe { gl::GetAttribLocation(self.id, name_cstr.as_ptr()) };
+        assert!(i >= 0, "Failed to query attrib location {}", name);
+        i 
     }
 
     /// Get location of uniform in the program
     pub fn uniform_location(&self, name: &str) -> GLint {
         let name_cstr = CString::new(name).unwrap();
-        unsafe { gl::GetUniformLocation(self.id, name_cstr.as_ptr()) }
+        let i = unsafe { gl::GetUniformLocation(self.id, name_cstr.as_ptr()) };
+        assert!(i >= 0, "Failed to query uniform location {}", name);
+        i  
     }
 
     /// Binding vertex buffer to given attribute in the program

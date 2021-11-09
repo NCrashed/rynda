@@ -2,6 +2,7 @@ use gl::types::*;
 use std::marker::PhantomData;
 use std::{mem, ptr};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PrimitiveType {
     Points,
     LineStrip,
@@ -48,28 +49,38 @@ pub struct IndexBuffer<T> {
 
 impl<T> IndexBuffer<T> {
     pub fn new(primitive: PrimitiveType, data: &[T]) -> Self {
-        let mut ebo = 0;
-        unsafe {
-            gl::GenBuffers(1, &mut ebo);
-            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
-            gl::BufferData(
-                gl::ELEMENT_ARRAY_BUFFER,
-                (data.len() * mem::size_of::<T>()) as GLsizeiptr,
-                mem::transmute(&data[0]),
-                gl::STATIC_DRAW,
-            );
-        }
-        IndexBuffer {
+        let mut buffer = IndexBuffer {
             phantom: PhantomData,
-            id: ebo,
-            length: data.len(),
+            id: 0,
+            length: 0,
             primitive,
+        };
+        unsafe {
+            gl::GenBuffers(1, &mut buffer.id);
         }
+
+        buffer.load(data);
+        buffer
     }
 
     pub fn bind(&self) {
         unsafe {
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.id);
+            gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.id);
+        }
+    }
+
+    pub fn load(&mut self, data: &[T]) {
+        if !data.is_empty() {
+            unsafe {
+                gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.id);
+                gl::BufferData(
+                    gl::ELEMENT_ARRAY_BUFFER,
+                    (data.len() * mem::size_of::<T>()) as GLsizeiptr,
+                    mem::transmute(&data[0]),
+                    gl::STATIC_DRAW,
+                );
+            }
+            self.length = data.len();
         }
     }
 }
@@ -84,13 +95,15 @@ impl<T> Drop for IndexBuffer<T> {
 
 impl IndexBuffer<GLshort> {
     pub fn draw(&self) {
-        unsafe {
-            gl::DrawElements(
-                gl::TRIANGLE_STRIP,
-                self.length as GLint,
-                gl::UNSIGNED_SHORT,
-                ptr::null(),
-            );
+        if self.length > 0 {
+            unsafe {
+                gl::DrawElements(
+                    primitive_type_id(self.primitive),
+                    self.length as GLint,
+                    gl::UNSIGNED_SHORT,
+                    ptr::null(),
+                );
+            }
         }
     }
 }

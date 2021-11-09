@@ -60,7 +60,8 @@ impl DebugPipeline {
 
     pub fn load(&mut self) {
         let mut positions = vec![0.0; self.lines.len() * 6];
-        let mut colors = vec![0.0; self.lines.len() * 3];
+        let mut colors = vec![0.0; self.lines.len() * 6];
+        let mut indecies = vec![0; self.lines.len() * 2];
 
         for (i, line) in self.lines.iter().enumerate() {
             positions[i * 6 + 0] = line.start.x;
@@ -70,13 +71,20 @@ impl DebugPipeline {
             positions[i * 6 + 4] = line.end.y;
             positions[i * 6 + 5] = line.end.z;
 
-            colors[i * 3 + 0] = line.color.x;
-            colors[i * 3 + 1] = line.color.y;
-            colors[i * 3 + 2] = line.color.z;
+            colors[i * 6 + 0] = line.color.x;
+            colors[i * 6 + 1] = line.color.y;
+            colors[i * 6 + 2] = line.color.z;
+            colors[i * 6 + 3] = line.color.x;
+            colors[i * 6 + 4] = line.color.y;
+            colors[i * 6 + 5] = line.color.z;
+
+            indecies[i * 2 + 0] = (i*2) as i16;
+            indecies[i * 2 + 1] = (i*2+1) as i16;
         }
 
         self.pos_buffer.load(&positions);
         self.col_buffer.load(&colors);
+        self.ebo.load(&indecies);
     }
 
     pub fn set_mvp(&mut self, mvp: &Mat4) {

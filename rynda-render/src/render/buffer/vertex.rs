@@ -31,14 +31,16 @@ impl<T> VertexBuffer<T> {
     }
 
     pub fn load(&mut self, data: &[T]) {
-        unsafe {
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.id);
-            gl::BufferData(
-                gl::ARRAY_BUFFER,
-                (data.len() * mem::size_of::<T>()) as GLsizeiptr,
-                mem::transmute(&data[0]),
-                gl::STATIC_DRAW,
-            );
+        if !data.is_empty() {
+            unsafe {
+                gl::BindBuffer(gl::ARRAY_BUFFER, self.id);
+                gl::BufferData(
+                    gl::ARRAY_BUFFER,
+                    (data.len() * mem::size_of::<T>()) as GLsizeiptr,
+                    mem::transmute(&data[0]),
+                    gl::STATIC_DRAW,
+                );
+            }
         }
     }
 }
