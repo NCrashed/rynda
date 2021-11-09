@@ -56,12 +56,10 @@ fn main() {
     let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
     let compute_shader =
         str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
-    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
-    let quad_pipeline =
+    let mut raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
+    let mut quad_pipeline =
         QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
 
-    let mode_id = raycast_pipeline.program.uniform_location("mode");
-    let mvp_id = quad_pipeline.program.uniform_location("MVP");
     let mut camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
     let (cx0, cy0) = window.get_cursor_pos();
@@ -83,16 +81,13 @@ fn main() {
         }
 
         raycast_pipeline.bind();
-        unsafe {
-            gl::Uniform1i(mode_id, events_ctx.mode as i32);
-        }
+        raycast_pipeline
+            .program
+            .set_uniform("mode", &(events_ctx.mode as i32));
         raycast_pipeline.draw();
 
         quad_pipeline.bind();
-        unsafe {
-            let mvp = camera.matrix();
-            gl::UniformMatrix4fv(mvp_id, 1, gl::FALSE, mvp.as_ref().as_ptr());
-        }
+        quad_pipeline.program.set_uniform("MVP", &camera.matrix());
         quad_pipeline.draw();
 
         window.swap_buffers();

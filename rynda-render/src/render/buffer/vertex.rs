@@ -12,26 +12,33 @@ pub struct VertexBuffer<T> {
 
 impl<T> VertexBuffer<T> {
     pub fn new(data: &[T]) -> Self {
-        let mut vbo = 0;
+        let mut buffer = VertexBuffer {
+            phantom: PhantomData,
+            id: 0,
+        };
         unsafe {
-            gl::GenBuffers(1, &mut vbo);
-            gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+            gl::GenBuffers(1, &mut buffer.id);
+        }
+
+        buffer.load(data);
+        buffer
+    }
+
+    pub fn bind(&self) {
+        unsafe {
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.id);
+        }
+    }
+
+    pub fn load(&mut self, data: &[T]) {
+        unsafe {
+            gl::BindBuffer(gl::ARRAY_BUFFER, self.id);
             gl::BufferData(
                 gl::ARRAY_BUFFER,
                 (data.len() * mem::size_of::<T>()) as GLsizeiptr,
                 mem::transmute(&data[0]),
                 gl::STATIC_DRAW,
             );
-        }
-        VertexBuffer {
-            phantom: PhantomData,
-            id: vbo,
-        }
-    }
-
-    pub fn bind(&self) {
-        unsafe {
-            gl::BindBuffer(gl::ARRAY_BUFFER, self.id);
         }
     }
 }

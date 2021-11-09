@@ -1,4 +1,3 @@
-
 use gl::types::*;
 use std::str;
 
@@ -9,13 +8,17 @@ use crate::render::{
         index::{IndexBuffer, PrimitiveType},
         vertex::VertexBuffer,
     },
-    shader::{Shader, ShaderProgram, ShaderType},
+    shader::{
+        program::ShaderProgram,
+        shader::{Shader, ShaderType},
+    },
 };
-use glam::Vec3;
+use glam::{Mat4, Vec3};
 
+#[derive(Clone, Copy, Debug)]
 pub struct DebugLine {
-    pub start: Vec3, 
-    pub end: Vec3, 
+    pub start: Vec3,
+    pub end: Vec3,
     pub color: Vec3,
 }
 
@@ -49,6 +52,36 @@ impl DebugPipeline {
             lines: vec![],
         }
     }
+
+    pub fn set_lines(&mut self, new_lines: &[DebugLine]) {
+        self.lines = new_lines.to_vec();
+        self.load();
+    }
+
+    pub fn load(&mut self) {
+        let mut positions = vec![0.0; self.lines.len() * 6];
+        let mut colors = vec![0.0; self.lines.len() * 3];
+
+        for (i, line) in self.lines.iter().enumerate() {
+            positions[i * 6 + 0] = line.start.x;
+            positions[i * 6 + 1] = line.start.y;
+            positions[i * 6 + 2] = line.start.z;
+            positions[i * 6 + 3] = line.end.x;
+            positions[i * 6 + 4] = line.end.y;
+            positions[i * 6 + 5] = line.end.z;
+
+            colors[i * 3 + 0] = line.color.x;
+            colors[i * 3 + 1] = line.color.y;
+            colors[i * 3 + 2] = line.color.z;
+        }
+
+        self.pos_buffer.load(&positions);
+        self.col_buffer.load(&colors);
+    }
+
+    pub fn set_mvp(&mut self, mvp: &Mat4) {
+        self.program.set_uniform("MVP", mvp);
+    }
 }
 
 impl Pipeline for DebugPipeline {
@@ -58,10 +91,12 @@ impl Pipeline for DebugPipeline {
 
         // Use quad program
         self.program.use_program();
-        
+
         // Bind vector attributes
-        self.program.bind_attribute::<Vec3>("position", &self.pos_buffer);
-        self.program.bind_attribute::<Vec3>("color", &self.col_buffer);
+        self.program
+            .bind_attribute::<Vec3>("position", &self.pos_buffer);
+        self.program
+            .bind_attribute::<Vec3>("color", &self.col_buffer);
     }
 
     fn draw(&self) {

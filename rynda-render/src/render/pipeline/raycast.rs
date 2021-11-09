@@ -4,7 +4,10 @@ use std::str;
 use super::generic::Pipeline;
 use crate::render::{
     buffer::shader::ShaderBuffer,
-    shader::{Shader, ShaderProgram, ShaderType},
+    shader::{
+        program::ShaderProgram,
+        shader::{Shader, ShaderType},
+    },
     texture::Texture,
 };
 use rynda_format::types::{pointermap::PointerColumn, volume::RleVolume};

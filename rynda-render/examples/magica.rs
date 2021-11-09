@@ -40,11 +40,9 @@ fn main() {
     let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
     let compute_shader =
         str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
-    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
+    let mut raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
     let quad_pipeline =
         QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
-
-    let mode_id = raycast_pipeline.program.uniform_location("mode");
 
     let mut mode: u32 = 0;
     while !window.should_close() {
@@ -60,10 +58,9 @@ fn main() {
         }
 
         raycast_pipeline.bind();
-        unsafe {
-            gl::Uniform1i(mode_id, mode as i32);
-        }
+        raycast_pipeline.program.set_uniform("mode", &(mode as i32));
         raycast_pipeline.draw();
+
         quad_pipeline.bind_draw();
 
         window.swap_buffers();

@@ -1,6 +1,6 @@
 use gl::types::*;
-use std::str;
 use glam::Vec2;
+use std::str;
 
 use super::generic::Pipeline;
 use crate::render::{
@@ -9,7 +9,10 @@ use crate::render::{
         index::{IndexBuffer, PrimitiveType},
         vertex::VertexBuffer,
     },
-    shader::{Shader, ShaderProgram, ShaderType},
+    shader::{
+        program::ShaderProgram,
+        shader::{Shader, ShaderType},
+    },
     texture::Texture,
 };
 
@@ -54,7 +57,7 @@ impl<'a> Pipeline for QuadPipeline<'a> {
         // Use quad program
         self.program.use_program();
         self.program.bind_attribute::<Vec2>("position", &self.vbo);
-        
+
         unsafe {
             // Bind output texture in Texture Unit 1
             gl::ActiveTexture(gl::TEXTURE1);
