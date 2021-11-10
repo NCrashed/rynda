@@ -65,7 +65,7 @@ fn main() {
         .create_window(
             1024,
             1024,
-            "Rynda scene test",
+            "Rynda debug boundaries test",
             glfw::WindowMode::Windowed,
         )
         .expect("Failed to create GLFW window.");
