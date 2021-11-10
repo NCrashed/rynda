@@ -1,6 +1,8 @@
-use glam::{Mat4, Quat, Vec3};
+use glam::{Mat4, Quat, Vec3, Vec4};
+use std::ops::Mul;
 
 /// Contains scale-rotation-translation information
+#[derive(Debug, Clone, Copy)]
 pub struct Transform {
     pub scale: Vec3,
     pub forward: Vec3,
@@ -29,10 +31,22 @@ impl Transform {
         }
     }
 
+    /// Construct only offset translation
+    pub fn translation(translation: Vec3) -> Self {
+        Transform {
+            translation,
+            ..Transform::default()
+        }
+    }
+
+    /// Get rotation matrix for the transformation
+    pub fn rotation(&self) -> Mat4 {
+        Mat4::look_at_rh(self.translation, self.translation + self.forward, self.up)
+    }
+
     /// Get matrix that transforms vectors with the given scale-rotation-translation
     pub fn matrix(&self) -> Mat4 {
-        Mat4::look_at_rh(self.translation, self.translation + self.forward, self.up)
-            * Mat4::from_scale(self.scale)
+        self.rotation() * Mat4::from_scale(self.scale)
     }
 
     /// Get right vector direction normalized
@@ -64,5 +78,56 @@ impl Transform {
 impl Default for Transform {
     fn default() -> Self {
         Transform::new()
+    }
+}
+
+/// Things that has transformation inside
+pub trait HasTransform {
+    fn transformation(&self) -> Transform;
+}
+
+impl Mul<Transform> for Transform {
+    type Output = Transform;
+
+    fn mul(self, rhs: Transform) -> Transform {
+        Transform {
+            scale: self.scale * rhs.scale,
+            forward: rhs.rotation().transform_vector3(self.forward),
+            up: rhs.rotation().transform_vector3(self.up),
+            translation: self.translation + rhs.translation,
+        }
+    }
+}
+
+impl Mul<Vec3> for Transform {
+    type Output = Vec3;
+
+    fn mul(self, rhs: Vec3) -> Vec3 {
+        self.matrix().transform_point3(rhs)
+    }
+}
+
+impl Mul<Vec4> for Transform {
+    type Output = Vec4;
+
+    fn mul(self, rhs: Vec4) -> Vec4 {
+        self.matrix() * rhs
+    }
+}
+
+/// Things that can be mutually transformed
+pub trait Transformable {
+    fn transform(&mut self, t: &Transform);
+}
+
+impl Transformable for Vec3 {
+    fn transform(&mut self, t: &Transform) {
+        *self = t.matrix().transform_point3(*self);
+    }
+}
+
+impl Transformable for Vec4 {
+    fn transform(&mut self, t: &Transform) {
+        *self = t.matrix() * *self;
     }
 }

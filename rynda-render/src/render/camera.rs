@@ -1,4 +1,4 @@
-use crate::math::transform::Transform;
+use crate::math::transform::{Transform, HasTransform};
 use glam::f32::{Mat4, Quat, Vec3};
 
 /// Contains information that required for conversion from world to screen space coordinates.
@@ -72,10 +72,45 @@ impl Camera {
     pub fn move_right(&mut self, dv: f64) {
         self.transform.translate(self.right() * (dv as f32));
     }
+
+    /// Get list of lines that shows boundaries of the camera frustrum
+    pub fn lines(&self) -> Vec<(Vec3, Vec3)> {
+        let matrix = self.matrix().inverse();
+
+        let p0 = matrix.project_point3(Vec3::new(-1.0, -1.0, -1.0));
+        let p1 = matrix.project_point3(Vec3::new(1.0, -1.0, -1.0));
+        let p2 = matrix.project_point3(Vec3::new(-1.0, 1.0, -1.0));
+        let p3 = matrix.project_point3(Vec3::new(1.0, 1.0, -1.0));
+        let p4 = matrix.project_point3(Vec3::new(-1.0, -1.0, 1.0));
+        let p5 = matrix.project_point3(Vec3::new(1.0, -1.0, 1.0));
+        let p6 = matrix.project_point3(Vec3::new(-1.0, 1.0, 1.0));
+        let p7 = matrix.project_point3(Vec3::new(1.0, 1.0, 1.0));
+
+        vec![
+            (p0, p1),
+            (p0, p2),
+            (p1, p3),
+            (p2, p3),
+            (p4, p5),
+            (p4, p6),
+            (p5, p7),
+            (p6, p7),
+            (p0, p4),
+            (p1, p5),
+            (p2, p6),
+            (p3, p7),
+        ]
+    }
 }
 
 impl Default for Camera {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl HasTransform for Camera {
+    fn transformation(&self) -> Transform {
+        self.transform.clone()
     }
 }

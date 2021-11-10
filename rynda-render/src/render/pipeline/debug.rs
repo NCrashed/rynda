@@ -22,6 +22,20 @@ pub struct DebugLine {
     pub color: Vec3,
 }
 
+impl DebugLine {
+    pub fn new(start: Vec3, end: Vec3, color: Vec3) -> Self {
+        DebugLine { start, end, color }
+    }
+
+    /// Attach color to given lines and make them [DebugLine]
+    pub fn from_vec(lines: Vec<(Vec3, Vec3)>, color: Vec3) -> Vec<DebugLine> {
+        lines
+            .iter()
+            .map(|(v1, v2)| DebugLine::new(*v1, *v2, color))
+            .collect()
+    }
+}
+
 /// Drawing pipeline that draws a single quad with given texture
 pub struct DebugPipeline {
     pub program: ShaderProgram,
@@ -78,8 +92,8 @@ impl DebugPipeline {
             colors[i * 6 + 4] = line.color.y;
             colors[i * 6 + 5] = line.color.z;
 
-            indecies[i * 2 + 0] = (i*2) as i16;
-            indecies[i * 2 + 1] = (i*2+1) as i16;
+            indecies[i * 2 + 0] = (i * 2) as i16;
+            indecies[i * 2 + 1] = (i * 2 + 1) as i16;
         }
 
         self.pos_buffer.load(&positions);

@@ -6,57 +6,20 @@ use ndarray::Array3;
 use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
-use rynda_render::render::{
-    camera::Camera,
-    debug::enable_gl_debug,
-    pipeline::{
-        debug::{DebugLine, DebugPipeline},
-        generic::Pipeline,
-        quad::QuadPipeline,
-        raycast::RaycastPipeline,
+use rynda_render::{
+    render::{
+        camera::Camera,
+        debug::enable_gl_debug,
+        pipeline::{
+            debug::{DebugLine, DebugPipeline},
+            generic::Pipeline,
+            quad::QuadPipeline,
+            raycast::RaycastPipeline,
+        },
     },
 };
 
-use glam::{Mat4, Vec3, Vec4};
-
-fn make_debug_lines(matrix: &Mat4) -> Vec<DebugLine> {
-    let p0 = Vec3::new(-1.0, -1.0, -1.0);
-    let p1 = Vec3::new(1.0, -1.0, -1.0);
-    let p2 = Vec3::new(-1.0, 1.0, -1.0);
-    let p3 = Vec3::new(1.0, 1.0, -1.0);
-    let p4 = Vec3::new(-1.0, -1.0, 1.0);
-    let p5 = Vec3::new(1.0, -1.0, 1.0);
-    let p6 = Vec3::new(-1.0, 1.0, 1.0);
-    let p7 = Vec3::new(1.0, 1.0, 1.0);
-
-    fn transform(v: Vec3, m: &Mat4) -> Vec3 {
-        let v1 = *m * Vec4::new(v.x, v.y, v.z, 1.0);
-        Vec3::new(v1.x / v1.w, v1.y / v1.w, v1.z / v1.w)
-    }
-
-    fn line(v1: Vec3, v2: Vec3, m: &Mat4) -> DebugLine {
-        DebugLine {
-            start: transform(v1, m),
-            end: transform(v2, m),
-            color: Vec3::new(1.0, 0.0, 0.0),
-        }
-    }
-
-    vec![
-        line(p0, p1, matrix),
-        line(p0, p2, matrix),
-        line(p1, p3, matrix),
-        line(p2, p3, matrix),
-        line(p4, p5, matrix),
-        line(p4, p6, matrix),
-        line(p5, p7, matrix),
-        line(p6, p7, matrix),
-        line(p0, p4, matrix),
-        line(p1, p5, matrix),
-        line(p2, p6, matrix),
-        line(p3, p7, matrix),
-    ]
-}
+use glam::{Mat4, Vec3};
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -104,7 +67,7 @@ fn main() {
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug_vertex.glsl")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug_fragment.glsl")).unwrap();
 
-    let mut raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
+    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
     let mut quad_pipeline =
         QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
@@ -139,26 +102,23 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
 
-        raycast_pipeline.bind();
-        raycast_pipeline
-            .program
-            .set_uniform("mode", &(events_ctx.mode as i32));
-        raycast_pipeline.draw();
-
-        quad_pipeline.bind();
-        let mvp = if events_ctx.mode == 0 {
-            debug_camera.matrix()
+        if events_ctx.mode == 0 {
+            debug_pipeline.bind();
+            let mvp = debug_camera.matrix();
+            debug_pipeline.set_lines(&DebugLine::from_vec(camera.lines(), Vec3::new(1.0, 0.0, 0.0)));
+            debug_pipeline.set_mvp(&mvp);
+            debug_pipeline.draw();
         } else {
-            Mat4::IDENTITY
-        };
-        quad_pipeline.program.set_uniform("MVP", &mvp);
-        quad_pipeline.draw();
+            raycast_pipeline.bind();
+            // raycast_pipeline
+            //     .program
+            //     .set_uniform("mode", &(events_ctx.mode as i32));
+            raycast_pipeline.draw();
 
-        debug_pipeline.bind();
-        let cam_inverse = camera.matrix().inverse();
-        debug_pipeline.set_lines(&make_debug_lines(&cam_inverse));
-        debug_pipeline.set_mvp(&mvp);
-        debug_pipeline.draw();
+            quad_pipeline.bind();
+            quad_pipeline.program.set_uniform("MVP", &Mat4::IDENTITY);
+            quad_pipeline.draw();
+        }
 
         window.swap_buffers();
     }
