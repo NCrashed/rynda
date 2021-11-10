@@ -113,6 +113,6 @@ impl Default for Camera {
 
 impl HasTransform for Camera {
     fn transformation(&self) -> Transform {
-        self.transform.clone()
+        self.transform
     }
 }

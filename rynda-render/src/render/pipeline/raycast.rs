@@ -5,8 +5,8 @@ use super::generic::Pipeline;
 use crate::render::{
     buffer::shader::ShaderBuffer,
     shader::{
+        compile::{Shader, ShaderType},
         program::ShaderProgram,
-        shader::{Shader, ShaderType},
     },
     texture::Texture,
 };

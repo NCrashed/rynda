@@ -3,7 +3,7 @@ use gl::types::*;
 use std::ffi::CString;
 use std::{ptr, str};
 
-use super::{shader::Shader, uniform::UniformValue, vertex::VertexAttribute};
+use super::{compile::Shader, uniform::UniformValue, vertex::VertexAttribute};
 
 #[derive(Debug)]
 pub struct ShaderProgram {

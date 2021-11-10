@@ -10,8 +10,8 @@ use crate::render::{
         vertex::VertexBuffer,
     },
     shader::{
+        compile::{Shader, ShaderType},
         program::ShaderProgram,
-        shader::{Shader, ShaderType},
     },
     texture::Texture,
 };

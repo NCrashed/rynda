@@ -9,8 +9,8 @@ use crate::render::{
         vertex::VertexBuffer,
     },
     shader::{
+        compile::{Shader, ShaderType},
         program::ShaderProgram,
-        shader::{Shader, ShaderType},
     },
 };
 use glam::{Mat4, Vec3};
@@ -78,21 +78,21 @@ impl DebugPipeline {
         let mut indecies = vec![0; self.lines.len() * 2];
 
         for (i, line) in self.lines.iter().enumerate() {
-            positions[i * 6 + 0] = line.start.x;
+            positions[i * 6] = line.start.x;
             positions[i * 6 + 1] = line.start.y;
             positions[i * 6 + 2] = line.start.z;
             positions[i * 6 + 3] = line.end.x;
             positions[i * 6 + 4] = line.end.y;
             positions[i * 6 + 5] = line.end.z;
 
-            colors[i * 6 + 0] = line.color.x;
+            colors[i * 6] = line.color.x;
             colors[i * 6 + 1] = line.color.y;
             colors[i * 6 + 2] = line.color.z;
             colors[i * 6 + 3] = line.color.x;
             colors[i * 6 + 4] = line.color.y;
             colors[i * 6 + 5] = line.color.z;
 
-            indecies[i * 2 + 0] = (i * 2) as i16;
+            indecies[i * 2] = (i * 2) as i16;
             indecies[i * 2 + 1] = (i * 2 + 1) as i16;
         }
 
