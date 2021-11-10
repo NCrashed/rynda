@@ -116,7 +116,10 @@ fn main() {
         quad_pipeline.draw();
 
         debug_pipeline.bind();
-        debug_pipeline.set_lines(&DebugLine::from_vec(camera.lines(), Vec3::new(1.0, 0.0, 0.0)));
+        debug_pipeline.set_lines(&DebugLine::from_vec(
+            camera.lines(),
+            Vec3::new(1.0, 0.0, 0.0),
+        ));
         debug_pipeline.set_mvp(&mvp);
         debug_pipeline.draw();
 

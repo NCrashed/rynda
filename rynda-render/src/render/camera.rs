@@ -1,4 +1,4 @@
-use crate::math::transform::{Transform, HasTransform};
+use crate::math::transform::{HasTransform, Transform};
 use glam::f32::{Mat4, Quat, Vec3};
 
 /// Contains information that required for conversion from world to screen space coordinates.
@@ -59,13 +59,15 @@ impl Camera {
             self.transform.rotate(Quat::from_rotation_y(-dx as f32));
         }
         if dy.abs() >= std::f64::EPSILON {
-            self.transform.rotate(Quat::from_axis_angle(-self.right(), dy as f32));
+            self.transform
+                .rotate(Quat::from_axis_angle(-self.right(), dy as f32));
         }
     }
 
     /// Move camera forward by given amount
     pub fn move_forward(&mut self, dv: f64) {
-        self.transform.translate(self.transform.forward * (dv as f32));
+        self.transform
+            .translate(self.transform.forward * (dv as f32));
     }
 
     /// Move camera forward by given amount

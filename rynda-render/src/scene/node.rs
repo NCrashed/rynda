@@ -1,5 +1,5 @@
-use crate::math::transform::Transform;
 use crate::math::aabb::AABB;
+use crate::math::transform::Transform;
 
 /// Single node in scene tree
 pub struct SceneNode {

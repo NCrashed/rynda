@@ -1,7 +1,10 @@
-use crate::math::{aabb::{AABB, HasBounding}, transform::{Transform, HasTransform}};
+use crate::math::{
+    aabb::{HasBounding, AABB},
+    transform::{HasTransform, Transform},
+};
+use glam::IVec3;
 use rynda_format::types::volume::RleVolume;
 use std::collections::HashMap;
-use glam::IVec3;
 
 /// Size of chunk in voxels in each dimension
 pub const CHUNK_SIZE: usize = 256;
@@ -72,7 +75,7 @@ impl HasBounding for ChunkedModel {
 
             let b = AABB {
                 minv: self.min_offset.as_vec3() * size,
-                maxv: (self.max_offset + IVec3::ONE).as_vec3()  * size,
+                maxv: (self.max_offset + IVec3::ONE).as_vec3() * size,
             };
             self.transform * b
         }

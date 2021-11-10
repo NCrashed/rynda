@@ -1,3 +1,3 @@
+pub mod chunk;
 pub mod node;
 pub mod tree;
-pub mod chunk;

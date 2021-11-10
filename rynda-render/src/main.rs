@@ -6,16 +6,14 @@ use ndarray::Array3;
 use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
-use rynda_render::{
-    render::{
-        camera::Camera,
-        debug::enable_gl_debug,
-        pipeline::{
-            debug::{DebugLine, DebugPipeline},
-            generic::Pipeline,
-            quad::QuadPipeline,
-            raycast::RaycastPipeline,
-        },
+use rynda_render::render::{
+    camera::Camera,
+    debug::enable_gl_debug,
+    pipeline::{
+        debug::{DebugLine, DebugPipeline},
+        generic::Pipeline,
+        quad::QuadPipeline,
+        raycast::RaycastPipeline,
     },
 };
 
@@ -25,12 +23,7 @@ fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::Resizable(true));
     let (mut window, events) = glfw
-        .create_window(
-            1024,
-            1024,
-            "Rynda scene test",
-            glfw::WindowMode::Windowed,
-        )
+        .create_window(1024, 1024, "Rynda scene test", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
@@ -105,7 +98,10 @@ fn main() {
         if events_ctx.mode == 0 {
             debug_pipeline.bind();
             let mvp = debug_camera.matrix();
-            debug_pipeline.set_lines(&DebugLine::from_vec(camera.lines(), Vec3::new(1.0, 0.0, 0.0)));
+            debug_pipeline.set_lines(&DebugLine::from_vec(
+                camera.lines(),
+                Vec3::new(1.0, 0.0, 0.0),
+            ));
             debug_pipeline.set_mvp(&mvp);
             debug_pipeline.draw();
         } else {

@@ -59,7 +59,7 @@ impl ShaderProgram {
         let name_cstr = CString::new(name).unwrap();
         let i = unsafe { gl::GetAttribLocation(self.id, name_cstr.as_ptr()) };
         assert!(i >= 0, "Failed to query attrib location {}", name);
-        i 
+        i
     }
 
     /// Get location of uniform in the program
@@ -67,7 +67,7 @@ impl ShaderProgram {
         let name_cstr = CString::new(name).unwrap();
         let i = unsafe { gl::GetUniformLocation(self.id, name_cstr.as_ptr()) };
         assert!(i >= 0, "Failed to query uniform location {}", name);
-        i  
+        i
     }
 
     /// Binding vertex buffer to given attribute in the program
