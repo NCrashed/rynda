@@ -90,6 +90,7 @@ impl Camera {
 
         let eye_start = self.transform.translation;
         let eye_end = eye_start + self.transform.forward;
+        let vp = self.vanishing_point();
 
         vec![
             (p0, p1),
@@ -105,7 +106,17 @@ impl Camera {
             (p2, p6),
             (p3, p7),
             (eye_start, eye_end),
+            (eye_start, vp),
         ]
+    }
+
+    /// Calculation of point where perspective lines are going to infinity.
+    ///
+    /// The point is defined as intersection of vertical line with screen plain.
+    /// Raycasing planes that are perpendicular to the XZ plane all go though the point.
+    pub fn vanishing_point(&self) -> Vec3 {
+        let pitch = self.transform.forward.angle_between(-Vec3::Y);
+        self.transform.translation + Vec3::new(0.0, 1.0, 0.0) * (-self.near / pitch.cos())
     }
 }
 
