@@ -10,7 +10,7 @@ use std::collections::HashMap;
 pub const CHUNK_SIZE: usize = 256;
 
 /// Size of single voxel in world units
-pub const VOXEL_SIZE: f32 = 0.1;
+pub const VOXEL_SIZE: f32 = 0.01;
 
 /// A world object that consists of several RLE voxel chunks
 pub struct ChunkedModel {
@@ -57,6 +57,10 @@ impl ChunkedModel {
         } else if coord.z > self.max_offset.z {
             self.max_offset.z = coord.z;
         }
+    }
+
+    pub fn get_chunk<'a>(&'a self, coords: IVec3) -> Option<&'a RleVolume> {
+        self.volumes.get(&coords)
     }
 }
 

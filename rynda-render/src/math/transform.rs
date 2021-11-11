@@ -15,7 +15,7 @@ impl Transform {
     pub fn new() -> Self {
         Transform {
             scale: Vec3::ONE,
-            forward: Vec3::Z,
+            forward: -Vec3::Z,
             up: Vec3::Y,
             translation: Vec3::ZERO,
         }
@@ -34,7 +34,7 @@ impl Transform {
     /// Construct only offset translation
     pub fn translation(translation: Vec3) -> Self {
         Transform {
-            translation,
+            translation: -translation,
             ..Transform::default()
         }
     }
@@ -103,7 +103,7 @@ impl Mul<Vec3> for Transform {
     type Output = Vec3;
 
     fn mul(self, rhs: Vec3) -> Vec3 {
-        self.matrix().transform_point3(rhs)
+        self.matrix().project_point3(rhs)
     }
 }
 
@@ -122,7 +122,7 @@ pub trait Transformable {
 
 impl Transformable for Vec3 {
     fn transform(&mut self, t: &Transform) {
-        *self = t.matrix().transform_point3(*self);
+        *self = t.matrix().project_point3(*self);
     }
 }
 

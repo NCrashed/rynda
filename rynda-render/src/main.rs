@@ -6,18 +6,22 @@ use ndarray::Array3;
 use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
-use rynda_render::render::{
-    camera::Camera,
-    debug::enable_gl_debug,
-    pipeline::{
-        debug::{DebugLine, DebugPipeline},
-        generic::Pipeline,
-        quad::QuadPipeline,
-        raycast::RaycastPipeline,
+use rynda_render::{
+    math::{aabb::HasBounding, transform::Transform},
+    render::{
+        camera::Camera,
+        debug::enable_gl_debug,
+        pipeline::{
+            debug::{DebugLine, DebugPipeline},
+            generic::Pipeline,
+            quad::QuadPipeline,
+            raycast::RaycastPipeline,
+        },
     },
+    scene::chunk::ChunkedModel,
 };
 
-use glam::{Mat4, Vec3};
+use glam::{IVec3, Mat4, Vec3};
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -51,6 +55,9 @@ fn main() {
         }
     });
     let volume: RleVolume = voxels.into();
+    let mut model = ChunkedModel::new();
+    model.transform = Transform::translation(Vec3::new(-1.0, -1.0, -1.0));
+    model.add_chunk(IVec3::new(0, 0, 0), volume);
 
     let vertex_shader =
         str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
@@ -60,7 +67,10 @@ fn main() {
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug_vertex.glsl")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug_fragment.glsl")).unwrap();
 
-    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
+    let raycast_pipeline = RaycastPipeline::new(
+        compute_shader,
+        model.get_chunk(IVec3::new(0, 0, 0)).unwrap(),
+    );
     let mut quad_pipeline =
         QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
@@ -98,10 +108,11 @@ fn main() {
         if events_ctx.mode == 0 {
             debug_pipeline.bind();
             let mvp = debug_camera.matrix();
-            debug_pipeline.set_lines(&DebugLine::from_vec(
-                camera.lines(),
-                Vec3::new(1.0, 0.0, 0.0),
-            ));
+            let camera_lines = DebugLine::from_vec(camera.lines(), Vec3::new(1.0, 0.0, 0.0));
+            let volume_lines =
+                DebugLine::from_vec(model.bounding_box().lines(), Vec3::new(0.0, 1.0, 0.0));
+
+            debug_pipeline.set_lines(&[camera_lines, volume_lines].concat());
             debug_pipeline.set_mvp(&mvp);
             debug_pipeline.draw();
         } else {

@@ -20,13 +20,11 @@ impl AABB {
 
     /// Ensures that minv vector less than maxv
     pub fn normalize(&mut self) {
-        self.minv.x = self.minv.x.min(self.maxv.x);
-        self.minv.y = self.minv.y.min(self.maxv.y);
-        self.minv.z = self.minv.z.min(self.maxv.z);
+        let newmin = Vec3::new(self.minv.x.min(self.maxv.x), self.minv.y.min(self.maxv.y), self.minv.z.min(self.maxv.z));
+        let newmax = Vec3::new(self.maxv.x.max(self.minv.x), self.maxv.y.max(self.minv.y), self.maxv.z.max(self.minv.z));
 
-        self.maxv.x = self.maxv.x.max(self.minv.x);
-        self.maxv.y = self.maxv.y.max(self.minv.y);
-        self.maxv.z = self.maxv.z.max(self.minv.z);
+        self.minv = newmin;
+        self.maxv = newmax;
     }
 
     /// Get list of lines that shows boundaries of the volume
