@@ -88,6 +88,9 @@ impl Camera {
         let p6 = matrix.project_point3(Vec3::new(-1.0, 1.0, 1.0));
         let p7 = matrix.project_point3(Vec3::new(1.0, 1.0, 1.0));
 
+        let eye_start = self.transform.translation;
+        let eye_end = eye_start + self.transform.forward;
+
         vec![
             (p0, p1),
             (p0, p2),
@@ -101,6 +104,7 @@ impl Camera {
             (p1, p5),
             (p2, p6),
             (p3, p7),
+            (eye_start, eye_end),
         ]
     }
 }
