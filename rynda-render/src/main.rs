@@ -2,7 +2,7 @@ extern crate gl;
 extern crate glfw;
 
 use glfw::{Action, Context, CursorMode, Key};
-use ndarray::Array3;
+use ndarray::{Array3, arr3};
 use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
@@ -56,8 +56,56 @@ fn main() {
     });
     let volume: RleVolume = voxels.into();
     let mut model = ChunkedModel::new();
+
     model.transform = Transform::translation(Vec3::new(-1.0, -1.0, -1.0));
     model.add_chunk(IVec3::new(0, 0, 0), volume);
+
+    let z = RgbVoxel::empty();
+    let r = RgbVoxel::only_red(1);
+    let mut font_voxels: Array3<RgbVoxel> = arr3(&[
+        [ [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+        ],
+        [ [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, r, r, z, r, z, z, r, z, r, z, z, r],
+          [r, z, z, z, r, z, z, r, z, r, z, r, z],
+          [r, z, z, z, r, z, z, r, z, r, r, z, z],
+          [z, r, z, z, r, z, z, r, z, r, r, z, z],
+          [z, z, r, z, r, z, z, r, z, r, z, r, z],
+          [z, z, r, z, r, z, z, r, z, r, z, z, r],
+          [r, r, z, z, z, r, r, z, z, r, z, z, r],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+          [z, z, z, z, z, z, z, z, z, z, z, z, z],
+        ],
+        ]);
+    // let mut font_voxels: Array3<RgbVoxel> = arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
+    // let mut font_voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
+    //     let sx = (x as isize) - 128;
+    //     let sz = (z as isize) - 128;
+    //     let sy = (y as isize) - 256;
+    //     if sx * sx + sz * sz + sy * sy < 64 * 64 {
+    //         RgbVoxel::only_red(1)
+    //     } else {
+    //         RgbVoxel::empty()
+    //     }
+    // });
+    font_voxels.swap_axes(0, 1);
+    font_voxels.swap_axes(2, 0);
+    let font_volume: RleVolume = font_voxels.into();
 
     let vertex_shader =
         str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
@@ -71,8 +119,14 @@ fn main() {
         compute_shader,
         model.get_chunk(IVec3::new(0, 0, 0)).unwrap(),
     );
+    let mut font_pipeline = RaycastPipeline::new(
+        compute_shader,
+        &font_volume,
+    );
     let mut quad_pipeline =
         QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
+    let mut font_quad_pipeline =
+        QuadPipeline::new(vertex_shader, fragment_shader, &font_pipeline.texture);
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
 
     let mut camera = Camera::look_at(Vec3::new(0.0, 2.0, -5.0), Vec3::ZERO);
@@ -125,6 +179,17 @@ fn main() {
             quad_pipeline.bind();
             quad_pipeline.program.set_uniform("MVP", &Mat4::IDENTITY);
             quad_pipeline.draw();
+
+            font_pipeline.bind();
+            // font_pipeline
+            //     .program
+            //     .set_uniform("mode", &1);
+            font_pipeline.draw();
+            font_quad_pipeline.bind();
+
+            let font_matrix = Mat4::from_translation(Vec3::new(-0.8, -0.8, 0.0)) * Mat4::from_scale(Vec3::new(0.1, 0.1, 0.1));
+            font_quad_pipeline.program.set_uniform("MVP", &font_matrix);
+            font_quad_pipeline.draw();
         }
 
         window.swap_buffers();
