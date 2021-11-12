@@ -41,10 +41,6 @@ fn main() {
     gl::load_with(|s| window.get_proc_address(s) as *const _);
     enable_gl_debug();
 
-    // let z = RgbVoxel::empty();
-    // let r = RgbVoxel::only_red(1);
-    // let voxels: Array3<RgbVoxel> = arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
-    // let voxels = rynda_format::from_vox::vox_to_rle_volume("assets/test_model.vox").unwrap();
     let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
         let sx = (x as isize) - 128;
         let sz = (z as isize) - 128;
@@ -63,17 +59,10 @@ fn main() {
     let vertex_shader =
         str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
     let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
-    // let compute_shader =
-    //     str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
     let vanish_shader = str::from_utf8(include_bytes!("../shaders/vanishpoint_compute.glsl")).unwrap();
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug_vertex.glsl")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug_fragment.glsl")).unwrap();
 
-    // let chunk = model.get_chunk(IVec3::new(0, 0, 0)).unwrap();
-    // let raycast_pipeline = RaycastPipeline::new(
-    //     compute_shader,
-    //     chunk,
-    // );
     let mut vanish_pipeline = VanishPointPipeline::new(vanish_shader, 1024, 1024);
     let mut quad_pipeline =
         QuadPipeline::new(vertex_shader, fragment_shader, &vanish_pipeline.texture);
@@ -120,12 +109,6 @@ fn main() {
             debug_pipeline.set_mvp(&mvp);
             debug_pipeline.draw();
         } else {
-            // raycast_pipeline.bind();
-            // raycast_pipeline
-            //     .program
-            //     .set_uniform("mode", &(events_ctx.mode as i32));
-            // raycast_pipeline.draw();
-
             vanish_pipeline.bind();
             vanish_pipeline.program.set_uniform("vanish_point", &camera.vanishing_point());
             vanish_pipeline.program.set_uniform("camera_mat", &camera.matrix());
