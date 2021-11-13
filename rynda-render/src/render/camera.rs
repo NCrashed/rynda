@@ -1,5 +1,5 @@
 use crate::math::transform::{HasTransform, Transform};
-use glam::f32::{Mat4, Quat, Vec3};
+use glam::{Mat4, Quat, Vec2, Vec3, Vec3Swizzles};
 
 /// Contains information that required for conversion from world to screen space coordinates.
 pub struct Camera {
@@ -117,6 +117,14 @@ impl Camera {
     pub fn vanishing_point(&self) -> Vec3 {
         let pitch = self.transform.forward.angle_between(-Vec3::Y);
         self.transform.translation + Vec3::new(0.0, 1.0, 0.0) * (-self.near / pitch.cos())
+    }
+
+    /// Calculate vanishing point in window coordinates
+    pub fn vanishing_point_window(&self, width: u32, height: u32) -> Vec2 {
+        let mut vp_screen = self.matrix().project_point3(self.vanishing_point());
+        vp_screen.x = (vp_screen.x + 1.0) * (width as f32) * 0.5;
+        vp_screen.y = (-vp_screen.y + 1.0) * (height as f32) * 0.5;
+        vp_screen.xy()
     }
 }
 

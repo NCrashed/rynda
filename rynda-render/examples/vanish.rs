@@ -27,8 +27,9 @@ use glam::{IVec3, Mat4, Vec3};
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::Resizable(true));
+    let screen_size = (1024, 1024);
     let (mut window, events) = glfw
-        .create_window(1024, 1024, "Rynda vanishing point test", glfw::WindowMode::Windowed)
+        .create_window(screen_size.0, screen_size.1, "Rynda vanishing point test", glfw::WindowMode::Windowed)
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
@@ -63,7 +64,7 @@ fn main() {
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug_vertex.glsl")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug_fragment.glsl")).unwrap();
 
-    let mut vanish_pipeline = VanishPointPipeline::new(vanish_shader, 1024, 1024);
+    let mut vanish_pipeline = VanishPointPipeline::new(vanish_shader, screen_size.0, screen_size.1);
     let mut quad_pipeline =
         QuadPipeline::new(vertex_shader, fragment_shader, &vanish_pipeline.texture);
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
@@ -110,8 +111,8 @@ fn main() {
             debug_pipeline.draw();
         } else {
             vanish_pipeline.bind();
-            vanish_pipeline.program.set_uniform("vanish_point", &camera.vanishing_point());
-            vanish_pipeline.program.set_uniform("camera_mat", &camera.matrix());
+            vanish_pipeline.program.set_uniform("vanish_point", &camera.vanishing_point_window(screen_size.0, screen_size.1));
+            // vanish_pipeline.program.set_uniform("camera_mat", &camera.matrix());
             vanish_pipeline.draw();
 
             quad_pipeline.bind();
