@@ -2,6 +2,7 @@ use crate::math::transform::{HasTransform, Transform};
 use glam::{Mat4, Quat, Vec2, Vec3, Vec3Swizzles};
 
 /// Contains information that required for conversion from world to screen space coordinates.
+#[derive(Debug, Clone)]
 pub struct Camera {
     pub transform: Transform,
     pub fov: f32,

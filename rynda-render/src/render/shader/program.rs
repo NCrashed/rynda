@@ -91,7 +91,7 @@ impl ShaderProgram {
         }
     }
 
-    pub fn set_uniform<T: UniformValue>(&mut self, attr_name: &str, value: &T) {
+    pub fn set_uniform<T: UniformValue>(&self, attr_name: &str, value: &T) {
         let slot_id = self.uniform_location(attr_name);
         UniformValue::upload_uniform(slot_id, value);
     }

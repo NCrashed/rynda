@@ -45,6 +45,12 @@ impl Texture {
             height,
         }
     }
+
+    pub fn clear(&self) {
+        unsafe {
+            gl::ClearTexImage(self.id, 0, gl::RGBA, gl::UNSIGNED_BYTE, ptr::null());
+        }
+    }
 }
 
 impl Drop for Texture {

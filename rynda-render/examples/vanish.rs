@@ -29,7 +29,12 @@ fn main() {
     glfw.window_hint(glfw::WindowHint::Resizable(true));
     let screen_size = (1024, 1024);
     let (mut window, events) = glfw
-        .create_window(screen_size.0, screen_size.1, "Rynda vanishing point test", glfw::WindowMode::Windowed)
+        .create_window(
+            screen_size.0,
+            screen_size.1,
+            "Rynda vanishing point test",
+            glfw::WindowMode::Windowed,
+        )
         .expect("Failed to create GLFW window.");
 
     window.set_key_polling(true);
@@ -60,19 +65,20 @@ fn main() {
     let vertex_shader =
         str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
     let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
-    let vanish_shader = str::from_utf8(include_bytes!("../shaders/vanishpoint_compute.glsl")).unwrap();
+    let vanish_shader =
+        str::from_utf8(include_bytes!("../shaders/vanishpoint_compute.glsl")).unwrap();
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug_vertex.glsl")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug_fragment.glsl")).unwrap();
-
-    let mut vanish_pipeline = VanishPointPipeline::new(vanish_shader, screen_size.0, screen_size.1);
-    let mut quad_pipeline =
-        QuadPipeline::new(vertex_shader, fragment_shader, &vanish_pipeline.texture);
-    let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
 
     let mut camera = Camera::look_at(Vec3::new(0.0, 2.0, -5.0), Vec3::ZERO);
     camera.near = 1.0;
     camera.far = 10.0;
     let mut debug_camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
+
+    let mut vanish_pipeline = VanishPointPipeline::new(vanish_shader, screen_size.0, screen_size.1, &camera);
+    let mut quad_pipeline =
+        QuadPipeline::new(vertex_shader, fragment_shader, &vanish_pipeline.texture);
+    let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
 
     let (cx0, cy0) = window.get_cursor_pos();
     let mut events_ctx = EventContext {
@@ -111,8 +117,13 @@ fn main() {
             debug_pipeline.draw();
         } else {
             vanish_pipeline.bind();
-            vanish_pipeline.program.set_uniform("vanish_point", &camera.vanishing_point_window(screen_size.0, screen_size.1));
-            // vanish_pipeline.program.set_uniform("camera_mat", &camera.matrix());
+            vanish_pipeline.camera = camera.clone();
+
+            let vp_screen = camera.vanishing_point_window(screen_size.0, screen_size.1);
+
+            vanish_pipeline
+                .program
+                .set_uniform("vanish_point", &vp_screen);
             vanish_pipeline.draw();
 
             quad_pipeline.bind();
