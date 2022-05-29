@@ -12,8 +12,8 @@ stdenv.mkDerivation rec {
     xorg.libXi
     xorg.libXinerama
     xorg.libXext
-    xlibs.libXcursor
-    xlibs.libXrandr
+    xorg.libXcursor
+    xorg.libXrandr
     freetype
     expat
     libxkbcommon
