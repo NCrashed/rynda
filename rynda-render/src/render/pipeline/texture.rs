@@ -1,0 +1,73 @@
+use gl::types::*;
+use std::str;
+use glam::Vec2;
+
+use super::generic::Pipeline;
+use crate::render::{
+    array::vertex::VertexArray,
+    buffer::{
+        frame::FrameBuffer,
+        index::{IndexBuffer, PrimitiveType},
+        vertex::VertexBuffer,
+    },
+    shader::{
+        compile::{Shader, ShaderType},
+        program::ShaderProgram,
+    },
+    texture::Texture,
+};
+
+/// Pipeline that renders to a texture
+pub struct TexturePipeline {
+    pub framebuffer: FrameBuffer<()>,
+    pub program: ShaderProgram,
+    pub vao: VertexArray,
+    pub vbo: VertexBuffer<GLfloat>,
+    pub ebo: IndexBuffer<GLshort>,
+}
+
+static QUAD_POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
+static QUAD_INDEX_DATA: [GLshort; 4] = [1, 2, 0, 3];
+
+impl TexturePipeline {
+    pub fn new(vertex_shader: &str, fragment_shader: &str, width: u32, height: u32) -> Self {
+        let texture = Texture::new(gl::TEXTURE1, width, height, None);
+        let framebuffer = FrameBuffer::new(texture);
+
+        let vs = Shader::compile(ShaderType::Vertex, vertex_shader);
+        let fs = Shader::compile(ShaderType::Fragment, fragment_shader);
+        let program = ShaderProgram::link(vec![vs, fs]);
+
+        let vao = VertexArray::new();
+        let vbo: VertexBuffer<GLfloat> = VertexBuffer::new(&QUAD_POSITION_DATA);
+        let ebo: IndexBuffer<GLshort> =
+            IndexBuffer::new(PrimitiveType::TriangleStrip, &QUAD_INDEX_DATA);
+
+        TexturePipeline {
+            framebuffer,
+            program,
+            vao,
+            vbo,
+            ebo,
+        }
+    }
+}
+
+impl Pipeline for TexturePipeline {
+    fn bind(&self) {
+        // Bind framebuffer 
+        self.framebuffer.bind();
+        // Bind vertex array
+        self.vao.bind();
+
+        // Use quad program
+        self.program.use_program();
+        self.program.bind_attribute::<Vec2>("position", &self.vbo);
+    }
+
+    fn draw(&self) {
+        unsafe {
+            self.ebo.draw();
+        }
+    }
+}
