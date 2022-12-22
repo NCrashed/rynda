@@ -50,7 +50,7 @@ fn main() {
     let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
     let compute_shader =
         str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
-    let mut raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
+    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
     let quad_pipeline =
         QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
 

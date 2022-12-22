@@ -47,6 +47,16 @@ fn main() {
     gl::load_with(|s| window.get_proc_address(s) as *const _);
     enable_gl_debug();
 
+    let mut max_group_count_x = 0;
+    let mut max_group_count_y = 0;
+    let mut max_group_count_z = 0;
+    unsafe {
+        gl::GetIntegeri_v(gl::MAX_COMPUTE_WORK_GROUP_COUNT, 0, &mut max_group_count_x);
+        gl::GetIntegeri_v(gl::MAX_COMPUTE_WORK_GROUP_COUNT, 1, &mut max_group_count_y);
+        gl::GetIntegeri_v(gl::MAX_COMPUTE_WORK_GROUP_COUNT, 2, &mut max_group_count_z);
+    }
+    println!("Max group count: {}, {}, {}", max_group_count_x, max_group_count_y, max_group_count_z);
+
     let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
         let sx = (x as isize) - 128;
         let sz = (z as isize) - 128;

@@ -16,15 +16,15 @@ layout (shared, binding = 0) readonly buffer InputData {
 layout (rgba8, binding = 1) uniform image2D img_output;
 
 uint rle_count(uint fields) {
-    return fields & 0xFFFF;
+    return fields & uint(0xFFFF);
 }
 
 uint skipped(uint fields) {
-    return (fields >> 16) & 0x3FF;
+    return (fields >> 16) & uint(0x3FF);
 }
 
 uint drawn(uint fields) {
-    return (fields >> 26) & 0x3F;
+    return (fields >> 26) & uint(0x3F);
 }
 
 uint flat_index(uvec2 pos)

@@ -70,6 +70,7 @@ impl Pipeline for VanishPointPipeline {
         self.program.set_uniform("segment", &0u32);
         self.program.set_uniform("np", &np);
         unsafe {
+            println!("Segments: {}", np);
             gl::DispatchCompute(np, 1, 1);
             gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
         }
@@ -84,6 +85,7 @@ impl Pipeline for VanishPointPipeline {
         self.program.set_uniform("segment", &1u32);
         self.program.set_uniform("np", &np);
         unsafe {
+            println!("Segments: {}", np);
             gl::DispatchCompute(np, 1, 1);
             gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
         }
@@ -97,6 +99,7 @@ impl Pipeline for VanishPointPipeline {
         self.program.set_uniform("segment", &2u32);
         self.program.set_uniform("np", &np);
         unsafe {
+            println!("Segments: {}", np);
             gl::DispatchCompute(np, 1, 1);
             gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
         }
@@ -110,6 +113,7 @@ impl Pipeline for VanishPointPipeline {
         self.program.set_uniform("segment", &3u32);
         self.program.set_uniform("np", &np);
         unsafe {
+            println!("Segments: {}", np);
             gl::DispatchCompute(np, 1, 1);
             gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
         }
