@@ -4,4 +4,3 @@ pub mod camera;
 pub mod debug;
 pub mod pipeline;
 pub mod shader;
-pub mod texture;

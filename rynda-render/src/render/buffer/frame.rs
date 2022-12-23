@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use gl::types::*;
 
 use super::depth::DepthBuffer;
-use super::super::texture::{Texture, TextureFormat};
+use super::texture::{Texture, TextureFormat};
 
 /// It’s a container for textures and an optional depth buffer.
 pub struct FrameBuffer<T> {

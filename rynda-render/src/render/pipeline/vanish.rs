@@ -7,7 +7,7 @@ use crate::render::{
         compile::{Shader, ShaderType},
         program::ShaderProgram,
     },
-    texture::{Texture, TextureFormat},
+    buffer::texture::{Texture, TextureFormat},
     camera::Camera,
 };
 

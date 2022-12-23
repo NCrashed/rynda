@@ -3,19 +3,21 @@ use std::str;
 
 use super::generic::Pipeline;
 use crate::render::{
-    buffer::shader::ShaderBuffer,
+    buffer::{
+        shader::ShaderBuffer,
+        texture::{Texture, TextureFormat},
+    },
     shader::{
         compile::{Shader, ShaderType},
         program::ShaderProgram,
     },
-    texture::{Texture, TextureFormat},
 };
 use rynda_format::types::{pointermap::PointerColumn, volume::RleVolume};
 
 /// Pipeline that renders raycast to a texture
 pub struct RaycastPipeline<'a> {
     pub program: ShaderProgram,
-    pub texture: Texture<{TextureFormat::RGBA}>,
+    pub texture: Texture<{ TextureFormat::RGBA }>,
     pub image_dimensions: (u32, u32),
     pub pointmap_buffer: ShaderBuffer<PointerColumn>,
     pub volume: &'a RleVolume,

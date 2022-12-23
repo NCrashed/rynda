@@ -1,5 +1,5 @@
 use gl::types::*;
-use glam::{IVec2, IVec3, Mat4, Vec2, Vec3};
+use glam::{IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Mat4, Vec2, Vec3, Vec4};
 
 /// Trait that allows to upload value to shader uniform
 pub trait UniformValue {
@@ -38,6 +38,14 @@ impl UniformValue for Mat4 {
     }
 }
 
+impl UniformValue for Vec4 {
+    fn upload_uniform(slot_id: GLint, value: &Self) {
+        unsafe {
+            gl::Uniform4f(slot_id, value.x, value.y, value.z, value.w);
+        }
+    }
+}
+
 impl UniformValue for Vec3 {
     fn upload_uniform(slot_id: GLint, value: &Self) {
         unsafe {
@@ -54,6 +62,14 @@ impl UniformValue for Vec2 {
     }
 }
 
+impl UniformValue for IVec4 {
+    fn upload_uniform(slot_id: GLint, value: &Self) {
+        unsafe {
+            gl::Uniform4i(slot_id, value.x, value.y, value.z, value.w);
+        }
+    }
+}
+
 impl UniformValue for IVec3 {
     fn upload_uniform(slot_id: GLint, value: &Self) {
         unsafe {
@@ -66,6 +82,30 @@ impl UniformValue for IVec2 {
     fn upload_uniform(slot_id: GLint, value: &Self) {
         unsafe {
             gl::Uniform2i(slot_id, value.x, value.y);
+        }
+    }
+}
+
+impl UniformValue for UVec4 {
+    fn upload_uniform(slot_id: GLint, value: &Self) {
+        unsafe {
+            gl::Uniform4ui(slot_id, value.x, value.y, value.z, value.w);
+        }
+    }
+}
+
+impl UniformValue for UVec3 {
+    fn upload_uniform(slot_id: GLint, value: &Self) {
+        unsafe {
+            gl::Uniform3ui(slot_id, value.x, value.y, value.z);
+        }
+    }
+}
+
+impl UniformValue for UVec2 {
+    fn upload_uniform(slot_id: GLint, value: &Self) {
+        unsafe {
+            gl::Uniform2ui(slot_id, value.x, value.y);
         }
     }
 }

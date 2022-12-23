@@ -8,12 +8,12 @@ use crate::render::{
     buffer::{
         index::{IndexBuffer, PrimitiveType},
         vertex::VertexBuffer,
+        texture::{Texture, TextureFormat},
     },
     shader::{
         compile::{Shader, ShaderType},
         program::ShaderProgram,
     },
-    texture::{Texture, TextureFormat},
 };
 
 /// Drawing pipeline that draws a single quad with given texture
@@ -51,6 +51,11 @@ impl<'a> QuadPipeline<'a> {
 
 impl<'a> Pipeline for QuadPipeline<'a> {
     fn bind(&self) {
+        // Bind render target screen
+        unsafe {
+            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+        }
+
         // Bind vertex array
         self.vao.bind();
 

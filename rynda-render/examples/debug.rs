@@ -65,8 +65,8 @@ fn main() {
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug_vertex.glsl")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug_fragment.glsl")).unwrap();
 
-    let mut raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
-    let mut quad_pipeline =
+    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
+    let quad_pipeline =
         QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
 

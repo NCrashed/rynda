@@ -60,7 +60,15 @@ impl<const FORMAT: TextureFormat> Texture<FORMAT> {
             gl::ClearTexImage(self.id, 0, gl::RGBA, gl::UNSIGNED_BYTE, ptr::null());
         }
     }
+
+    pub fn bind(&self, slot: i32) {
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0 + slot as u32);
+            gl::BindTexture(gl::TEXTURE_2D, self.id);
+        }
+    }
 }
+
 impl Texture<{TextureFormat::RGBAUI16}> {
     /// Make texture from pointermap of RLE volume
     pub fn from_pointermap(unit: GLenum, volume: &RleVolume) -> Self {

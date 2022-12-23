@@ -9,12 +9,12 @@ use crate::render::{
         frame::FrameBuffer,
         index::{IndexBuffer, PrimitiveType},
         vertex::VertexBuffer,
+        texture::Texture,
     },
     shader::{
         compile::{Shader, ShaderType},
         program::ShaderProgram,
     },
-    texture::Texture,
 };
 
 /// Pipeline that renders to a texture
@@ -34,7 +34,7 @@ impl TexturePipeline {
         let vs = Shader::compile(ShaderType::Vertex, vertex_shader);
         let fs = Shader::compile(ShaderType::Fragment, fragment_shader);
         let program = ShaderProgram::link(vec![vs, fs]);
-        
+
         let texture = Texture::new(gl::TEXTURE1, width, height, None);
         let framebuffer = FrameBuffer::new(texture);
 

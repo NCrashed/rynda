@@ -1,6 +1,7 @@
 extern crate gl;
 extern crate glfw;
 
+use glam::UVec3;
 use glfw::{Action, Context, Key};
 use ndarray::Array3;
 use std::str;
@@ -9,7 +10,7 @@ use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
     debug::enable_gl_debug,
     pipeline::{generic::Pipeline, quad::QuadPipeline, texture::TexturePipeline},
-    texture::Texture,
+    buffer::texture::Texture,
 };
 
 fn main() {
@@ -48,7 +49,7 @@ fn main() {
             RgbVoxel::empty()
         }
     });
-    
+
     let volume: RleVolume = voxels.into();
     let pointmap_texture = Texture::from_pointermap(gl::TEXTURE0, &volume);
 
@@ -77,28 +78,12 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
         texture_pipeline.program.set_uniform("mode", &(mode as i32));
+        texture_pipeline.program.set_uniform("volume_size", &UVec3::new(volume.xsize, volume.ysize, volume.zsize));
+        pointmap_texture.bind(0);
 
-        let slot: i32 = 0;
-        unsafe {
-            gl::ActiveTexture(gl::TEXTURE0 + slot as u32);
-            gl::BindTexture(gl::TEXTURE_2D, pointmap_texture.id);
-
-            // Bind input buffer
-            let volume_size_id = texture_pipeline.program.uniform_location("volume_size");
-            gl::Uniform3ui(
-                volume_size_id,
-                volume.xsize,
-                volume.ysize,
-                volume.zsize,
-            );
-        }
-        // pointmap_texture.bind();
-        texture_pipeline.program.set_uniform("pointermap", &slot);
+        texture_pipeline.program.set_uniform("pointermap", &0u32);
         texture_pipeline.draw();
 
-        unsafe {
-            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-        }
         quad_pipeline.bind_draw();
 
         window.swap_buffers();
