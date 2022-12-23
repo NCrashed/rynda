@@ -1,6 +1,6 @@
 use gl::types::*;
-use std::str;
 use glam::Vec2;
+use std::str;
 
 use super::generic::Pipeline;
 use crate::render::{
@@ -8,8 +8,8 @@ use crate::render::{
     buffer::{
         frame::FrameBuffer,
         index::{IndexBuffer, PrimitiveType},
-        vertex::VertexBuffer,
         texture::Texture,
+        vertex::VertexBuffer,
     },
     shader::{
         compile::{Shader, ShaderType},
@@ -55,7 +55,7 @@ impl TexturePipeline {
 
 impl Pipeline for TexturePipeline {
     fn bind(&self) {
-        // Bind framebuffer 
+        // Bind framebuffer
         self.framebuffer.bind();
         // Bind vertex array
         self.vao.bind();

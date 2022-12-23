@@ -20,8 +20,16 @@ impl AABB {
 
     /// Ensures that minv vector less than maxv
     pub fn normalize(&mut self) {
-        let newmin = Vec3::new(self.minv.x.min(self.maxv.x), self.minv.y.min(self.maxv.y), self.minv.z.min(self.maxv.z));
-        let newmax = Vec3::new(self.maxv.x.max(self.minv.x), self.maxv.y.max(self.minv.y), self.maxv.z.max(self.minv.z));
+        let newmin = Vec3::new(
+            self.minv.x.min(self.maxv.x),
+            self.minv.y.min(self.maxv.y),
+            self.minv.z.min(self.maxv.z),
+        );
+        let newmax = Vec3::new(
+            self.maxv.x.max(self.minv.x),
+            self.maxv.y.max(self.minv.y),
+            self.maxv.z.max(self.minv.z),
+        );
 
         self.minv = newmin;
         self.maxv = newmax;

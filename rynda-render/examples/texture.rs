@@ -8,9 +8,9 @@ use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
+    buffer::texture::Texture,
     debug::enable_gl_debug,
     pipeline::{generic::Pipeline, quad::QuadPipeline, texture::TexturePipeline},
-    buffer::texture::Texture,
 };
 
 fn main() {
@@ -55,14 +55,17 @@ fn main() {
 
     let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
     let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
-    let texture_fragment = str::from_utf8(include_bytes!("../shaders/pointermap_fragment.glsl")).unwrap();
+    let texture_fragment =
+        str::from_utf8(include_bytes!("../shaders/pointermap_fragment.glsl")).unwrap();
 
     let texture_pipeline = TexturePipeline::new(quad_vertex, texture_fragment, width, height);
     texture_pipeline.program.print_uniforms();
 
-    let quad_pipeline =
-        QuadPipeline::new(quad_vertex, quad_fragment, &texture_pipeline.framebuffer.color_buffer);
-    
+    let quad_pipeline = QuadPipeline::new(
+        quad_vertex,
+        quad_fragment,
+        &texture_pipeline.framebuffer.color_buffer,
+    );
 
     let mut mode: u32 = 0;
     while !window.should_close() {
@@ -78,7 +81,10 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
         texture_pipeline.program.set_uniform("mode", &(mode as i32));
-        texture_pipeline.program.set_uniform("volume_size", &UVec3::new(volume.xsize, volume.ysize, volume.zsize));
+        texture_pipeline.program.set_uniform(
+            "volume_size",
+            &UVec3::new(volume.xsize, volume.ysize, volume.zsize),
+        );
         pointmap_texture.bind(0);
 
         texture_pipeline.program.set_uniform("pointermap", &0u32);

@@ -1,5 +1,5 @@
-use std::marker::PhantomData;
 use gl::types::*;
+use std::marker::PhantomData;
 
 use super::depth::DepthBuffer;
 use super::texture::{Texture, TextureFormat};
@@ -13,12 +13,12 @@ pub struct FrameBuffer<T> {
     /// Depth buffer attached
     pub depth_buffer: DepthBuffer<T>,
     /// Binded color texture
-    pub color_buffer: Texture<{TextureFormat::RGBA}>,
+    pub color_buffer: Texture<{ TextureFormat::RGBA }>,
 }
 
 impl<T> FrameBuffer<T> {
     /// Allocates new empty frame buffer
-    pub fn new(color_buffer: Texture<{TextureFormat::RGBA}>) -> Self {
+    pub fn new(color_buffer: Texture<{ TextureFormat::RGBA }>) -> Self {
         let mut id = 0;
         let width = color_buffer.width;
         let height = color_buffer.height;
@@ -31,7 +31,12 @@ impl<T> FrameBuffer<T> {
         let depth_buffer = DepthBuffer::new(width, height);
 
         unsafe {
-            gl::FramebufferRenderbuffer(gl::FRAMEBUFFER, gl::DEPTH_ATTACHMENT, gl::RENDERBUFFER, depth_buffer.id);
+            gl::FramebufferRenderbuffer(
+                gl::FRAMEBUFFER,
+                gl::DEPTH_ATTACHMENT,
+                gl::RENDERBUFFER,
+                depth_buffer.id,
+            );
             gl::FramebufferTexture(gl::FRAMEBUFFER, gl::COLOR_ATTACHMENT0, color_buffer.id, 0);
 
             let draw_buffers: Vec<GLenum> = vec![gl::COLOR_ATTACHMENT0];
@@ -39,7 +44,7 @@ impl<T> FrameBuffer<T> {
 
             if gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE {
                 panic!("Failed to finish framebuffer");
-            } 
+            }
         }
 
         Self {
@@ -54,7 +59,12 @@ impl<T> FrameBuffer<T> {
     pub fn bind(&self) {
         unsafe {
             gl::BindFramebuffer(gl::FRAMEBUFFER, self.id);
-            gl::Viewport(0, 0, self.color_buffer.width as i32, self.color_buffer.height as i32);
+            gl::Viewport(
+                0,
+                0,
+                self.color_buffer.width as i32,
+                self.color_buffer.height as i32,
+            );
         }
     }
 }

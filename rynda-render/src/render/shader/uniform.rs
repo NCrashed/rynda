@@ -1,5 +1,5 @@
 use gl::types::*;
-use glam::{IVec2, IVec3, IVec4, UVec2, UVec3, UVec4, Mat4, Vec2, Vec3, Vec4};
+use glam::{IVec2, IVec3, IVec4, Mat4, UVec2, UVec3, UVec4, Vec2, Vec3, Vec4};
 
 /// Trait that allows to upload value to shader uniform
 pub trait UniformValue {

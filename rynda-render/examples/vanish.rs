@@ -75,9 +75,9 @@ fn main() {
     camera.far = 10.0;
     let mut debug_camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
-    let mut vanish_pipeline = VanishPointPipeline::new(vanish_shader, screen_size.0, screen_size.1, &camera);
-    let quad_pipeline =
-        QuadPipeline::new(vertex_shader, fragment_shader, &vanish_pipeline.texture);
+    let mut vanish_pipeline =
+        VanishPointPipeline::new(vanish_shader, screen_size.0, screen_size.1, &camera);
+    let quad_pipeline = QuadPipeline::new(vertex_shader, fragment_shader, &vanish_pipeline.texture);
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
 
     let (cx0, cy0) = window.get_cursor_pos();

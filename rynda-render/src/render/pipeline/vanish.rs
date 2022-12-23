@@ -3,18 +3,18 @@ use std::str;
 
 use super::generic::Pipeline;
 use crate::render::{
+    buffer::texture::{Texture, TextureFormat},
+    camera::Camera,
     shader::{
         compile::{Shader, ShaderType},
         program::ShaderProgram,
     },
-    buffer::texture::{Texture, TextureFormat},
-    camera::Camera,
 };
 
 /// Pipeline that renders raycast to a texture
 pub struct VanishPointPipeline {
     pub program: ShaderProgram,
-    pub texture: Texture<{TextureFormat::RGBA}>,
+    pub texture: Texture<{ TextureFormat::RGBA }>,
     pub image_dimensions: (u32, u32),
     pub camera: Camera,
 }
@@ -59,10 +59,12 @@ impl Pipeline for VanishPointPipeline {
 
     fn draw(&self) {
         self.texture.clear();
-        let vp_screen = self.camera.vanishing_point_window(self.image_dimensions.0, self.image_dimensions.1);
+        let vp_screen = self
+            .camera
+            .vanishing_point_window(self.image_dimensions.0, self.image_dimensions.1);
 
         // Segment 1 (right)
-        let np:u32 = if vp_screen.x as u32 >= self.image_dimensions.0 {
+        let np: u32 = if vp_screen.x as u32 >= self.image_dimensions.0 {
             0
         } else {
             2 * (self.image_dimensions.0 - (vp_screen.x as u32))

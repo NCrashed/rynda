@@ -4,9 +4,9 @@ use std::{mem, ptr};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum TextureFormat {
-    RGBA, 
+    RGBA,
     RGBAUI16,
-} 
+}
 
 pub struct Texture<const FORMAT: TextureFormat> {
     pub id: GLuint,
@@ -14,7 +14,7 @@ pub struct Texture<const FORMAT: TextureFormat> {
     pub height: u32,
 }
 
-impl Texture<{TextureFormat::RGBA}> {
+impl Texture<{ TextureFormat::RGBA }> {
     pub fn new(unit: GLenum, width: u32, height: u32, image: Option<&image::RgbaImage>) -> Self {
         let mut tex_id = 0;
         unsafe {
@@ -69,7 +69,7 @@ impl<const FORMAT: TextureFormat> Texture<FORMAT> {
     }
 }
 
-impl Texture<{TextureFormat::RGBAUI16}> {
+impl Texture<{ TextureFormat::RGBAUI16 }> {
     /// Make texture from pointermap of RLE volume
     pub fn from_pointermap(unit: GLenum, volume: &RleVolume) -> Self {
         let mut tex_id = 0;
@@ -92,11 +92,7 @@ impl Texture<{TextureFormat::RGBAUI16}> {
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as GLint);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as GLint);
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as GLint);
-            gl::TexParameteri(
-                gl::TEXTURE_2D,
-                gl::TEXTURE_MIN_FILTER,
-                gl::NEAREST as GLint,
-            );
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as GLint);
         }
         Texture {
             id: tex_id,
@@ -104,7 +100,6 @@ impl Texture<{TextureFormat::RGBAUI16}> {
             height: volume.zsize,
         }
     }
-
 }
 
 impl<const FORMAT: TextureFormat> Drop for Texture<FORMAT> {

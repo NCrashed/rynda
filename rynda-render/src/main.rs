@@ -55,7 +55,10 @@ fn main() {
         gl::GetIntegeri_v(gl::MAX_COMPUTE_WORK_GROUP_COUNT, 1, &mut max_group_count_y);
         gl::GetIntegeri_v(gl::MAX_COMPUTE_WORK_GROUP_COUNT, 2, &mut max_group_count_z);
     }
-    println!("Max group count: {}, {}, {}", max_group_count_x, max_group_count_y, max_group_count_z);
+    println!(
+        "Max group count: {}, {}, {}",
+        max_group_count_x, max_group_count_y, max_group_count_z
+    );
 
     let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
         let sx = (x as isize) - 128;
@@ -85,9 +88,9 @@ fn main() {
     camera.far = 10.0;
     let mut debug_camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
-    let mut vanish_pipeline = VanishPointPipeline::new(vanish_shader, screen_size.0, screen_size.1, &camera);
-    let quad_pipeline =
-        QuadPipeline::new(vertex_shader, fragment_shader, &vanish_pipeline.texture);
+    let mut vanish_pipeline =
+        VanishPointPipeline::new(vanish_shader, screen_size.0, screen_size.1, &camera);
+    let quad_pipeline = QuadPipeline::new(vertex_shader, fragment_shader, &vanish_pipeline.texture);
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
 
     let (cx0, cy0) = window.get_cursor_pos();

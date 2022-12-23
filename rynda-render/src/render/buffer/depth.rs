@@ -1,5 +1,5 @@
-use std::marker::PhantomData;
 use gl::types::*;
+use std::marker::PhantomData;
 
 /// Contains depth information for frame buffer
 pub struct DepthBuffer<T> {
@@ -15,11 +15,16 @@ impl<T> DepthBuffer<T> {
     /// Allocates new empty frame buffer
     pub fn new(width: u32, height: u32) -> Self {
         let mut id = 0;
-        
+
         unsafe {
             gl::GenRenderbuffers(1, &mut id);
             gl::BindRenderbuffer(gl::RENDERBUFFER, id);
-            gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH_COMPONENT, width as i32, height as i32);
+            gl::RenderbufferStorage(
+                gl::RENDERBUFFER,
+                gl::DEPTH_COMPONENT,
+                width as i32,
+                height as i32,
+            );
         }
 
         Self {
