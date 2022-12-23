@@ -1,19 +1,21 @@
 extern crate gl;
 extern crate glfw;
 
+use glam::UVec3;
 use glfw::{Action, Context, CursorMode, Key};
 use ndarray::Array3;
 use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
+    buffer::texture::Texture,
     camera::Camera,
     debug::enable_gl_debug,
     pipeline::{
         debug::{DebugLine, DebugPipeline},
         generic::Pipeline,
         quad::QuadPipeline,
-        raycast::RaycastPipeline,
+        texture::TexturePipeline,
     },
 };
 
@@ -21,11 +23,13 @@ use glam::{Mat4, Vec3};
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::Resizable(true));
+    glfw.window_hint(glfw::WindowHint::Resizable(false));
+    let width = 1024;
+    let height = 1024;
     let (mut window, events) = glfw
         .create_window(
-            1024,
-            1024,
+            width,
+            height,
             "Rynda debug boundaries test",
             glfw::WindowMode::Windowed,
         )
@@ -56,18 +60,23 @@ fn main() {
         }
     });
     let volume: RleVolume = voxels.into();
+    let pointmap_texture = Texture::from_pointermap(gl::TEXTURE0, &volume);
 
+    let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
     let vertex_shader =
         str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
     let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
     let compute_shader =
-        str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
+        str::from_utf8(include_bytes!("../shaders/pointermap_fragment.glsl")).unwrap();
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug_vertex.glsl")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug_fragment.glsl")).unwrap();
 
-    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
-    let quad_pipeline =
-        QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
+    let texture_pipeline = TexturePipeline::new(quad_vertex, compute_shader, width, height);
+    let quad_pipeline = QuadPipeline::new(
+        vertex_shader,
+        fragment_shader,
+        &texture_pipeline.framebuffer.color_buffer,
+    );
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
 
     let mut camera = Camera::look_at(Vec3::new(0.0, 2.0, -5.0), Vec3::ZERO);
@@ -94,19 +103,29 @@ fn main() {
         }
         events_ctx.move_camera(active_camera);
 
+        texture_pipeline.bind();
         unsafe {
             // Clear the screen
             gl::ClearColor(1.0, 1.0, 1.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
-
-        raycast_pipeline.bind();
-        raycast_pipeline
+        texture_pipeline
             .program
             .set_uniform("mode", &(events_ctx.mode as i32));
-        raycast_pipeline.draw();
+        texture_pipeline.program.set_uniform(
+            "volume_size",
+            &UVec3::new(volume.xsize, volume.ysize, volume.zsize),
+        );
+        pointmap_texture.bind(0);
+        texture_pipeline.program.set_uniform("pointermap", &0i32);
+        texture_pipeline.draw();
 
         quad_pipeline.bind();
+        unsafe {
+            // Clear the screen
+            gl::ClearColor(1.0, 1.0, 1.0, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
         let mvp = if events_ctx.mode == 0 {
             debug_camera.matrix()
         } else {

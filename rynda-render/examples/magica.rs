@@ -3,22 +3,26 @@ extern crate gl;
 extern crate glfw;
 
 use dot_vox::load_bytes;
+use glam::UVec3;
 use glfw::{Action, Context, Key};
 use std::str;
 
 use rynda_format::types::volume::RleVolume;
 use rynda_render::render::{
+    buffer::texture::Texture,
     debug::enable_gl_debug,
-    pipeline::{generic::Pipeline, quad::QuadPipeline, raycast::RaycastPipeline},
+    pipeline::{generic::Pipeline, quad::QuadPipeline, texture::TexturePipeline},
 };
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::Resizable(true));
+    glfw.window_hint(glfw::WindowHint::Resizable(false));
+    let width = 1024;
+    let height = 1024;
     let (mut window, events) = glfw
         .create_window(
-            1024,
-            1024,
+            width,
+            height,
             "Rynda VoxelMagica test",
             glfw::WindowMode::Windowed,
         )
@@ -35,14 +39,21 @@ fn main() {
     let volume: RleVolume = load_bytes(include_bytes!("../../assets/test_model.vox"))
         .unwrap()
         .into();
+    let pointmap_texture = Texture::from_pointermap(gl::TEXTURE0, &volume);
 
-    let vertex_shader = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
-    let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
-    let compute_shader =
-        str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
-    let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
-    let quad_pipeline =
-        QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
+    let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
+    let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
+    let texture_fragment =
+        str::from_utf8(include_bytes!("../shaders/pointermap_fragment.glsl")).unwrap();
+
+    let texture_pipeline = TexturePipeline::new(quad_vertex, texture_fragment, width, height);
+    texture_pipeline.program.print_uniforms();
+
+    let quad_pipeline = QuadPipeline::new(
+        quad_vertex,
+        quad_fragment,
+        &texture_pipeline.framebuffer.color_buffer,
+    );
 
     let mut mode: u32 = 0;
     while !window.should_close() {
@@ -51,15 +62,21 @@ fn main() {
             handle_window_event(&mut window, event, &mut mode);
         }
 
+        texture_pipeline.bind();
         unsafe {
             // Clear the screen
             gl::ClearColor(1.0, 1.0, 1.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
+        texture_pipeline.program.set_uniform("mode", &(mode as i32));
+        texture_pipeline.program.set_uniform(
+            "volume_size",
+            &UVec3::new(volume.xsize, volume.ysize, volume.zsize),
+        );
+        pointmap_texture.bind(0);
 
-        raycast_pipeline.bind();
-        raycast_pipeline.program.set_uniform("mode", &(mode as i32));
-        raycast_pipeline.draw();
+        texture_pipeline.program.set_uniform("pointermap", &0i32);
+        texture_pipeline.draw();
 
         quad_pipeline.bind_draw();
 
