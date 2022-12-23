@@ -7,14 +7,14 @@ use crate::render::{
         compile::{Shader, ShaderType},
         program::ShaderProgram,
     },
-    texture::Texture,
+    texture::{Texture, TextureFormat},
     camera::Camera,
 };
 
 /// Pipeline that renders raycast to a texture
 pub struct VanishPointPipeline {
     pub program: ShaderProgram,
-    pub texture: Texture,
+    pub texture: Texture<{TextureFormat::RGBA}>,
     pub image_dimensions: (u32, u32),
     pub camera: Camera,
 }

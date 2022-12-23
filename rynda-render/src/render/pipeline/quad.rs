@@ -13,14 +13,14 @@ use crate::render::{
         compile::{Shader, ShaderType},
         program::ShaderProgram,
     },
-    texture::Texture,
+    texture::{Texture, TextureFormat},
 };
 
 /// Drawing pipeline that draws a single quad with given texture
 pub struct QuadPipeline<'a> {
     pub program: ShaderProgram,
     pub vao: VertexArray,
-    pub texture: &'a Texture,
+    pub texture: &'a Texture<{TextureFormat::RGBA}>,
     pub vbo: VertexBuffer<GLfloat>,
     pub ebo: IndexBuffer<GLshort>,
 }
@@ -29,7 +29,7 @@ static QUAD_POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0,
 static QUAD_INDEX_DATA: [GLshort; 4] = [1, 2, 0, 3];
 
 impl<'a> QuadPipeline<'a> {
-    pub fn new(vertex_shader: &str, fragment_shader: &str, texture: &'a Texture) -> Self {
+    pub fn new(vertex_shader: &str, fragment_shader: &str, texture: &'a Texture<{TextureFormat::RGBA}>) -> Self {
         let vs = Shader::compile(ShaderType::Vertex, vertex_shader);
         let fs = Shader::compile(ShaderType::Fragment, fragment_shader);
         let program = ShaderProgram::link(vec![vs, fs]);

@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 use gl::types::*;
 
 use super::depth::DepthBuffer;
-use super::super::texture::Texture;
+use super::super::texture::{Texture, TextureFormat};
 
 /// It’s a container for textures and an optional depth buffer.
 pub struct FrameBuffer<T> {
@@ -13,12 +13,12 @@ pub struct FrameBuffer<T> {
     /// Depth buffer attached
     pub depth_buffer: DepthBuffer<T>,
     /// Binded color texture
-    pub color_buffer: Texture,
+    pub color_buffer: Texture<{TextureFormat::RGBA}>,
 }
 
 impl<T> FrameBuffer<T> {
     /// Allocates new empty frame buffer
-    pub fn new(color_buffer: Texture) -> Self {
+    pub fn new(color_buffer: Texture<{TextureFormat::RGBA}>) -> Self {
         let mut id = 0;
         let width = color_buffer.width;
         let height = color_buffer.height;

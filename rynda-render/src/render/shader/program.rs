@@ -1,7 +1,7 @@
 use crate::render::buffer::vertex::VertexBuffer;
 use gl::types::*;
 use std::ffi::CString;
-use std::{ptr, str};
+use std::{mem, ptr, str};
 
 use super::{compile::Shader, uniform::UniformValue, vertex::VertexAttribute};
 
@@ -94,6 +94,36 @@ impl ShaderProgram {
     pub fn set_uniform<T: UniformValue>(&self, attr_name: &str, value: &T) {
         let slot_id = self.uniform_location(attr_name);
         UniformValue::upload_uniform(slot_id, value);
+    }
+
+    pub fn print_uniforms(&self) {
+        let mut count = 0;
+        unsafe {
+            gl::GetProgramiv(self.id, gl::ACTIVE_UNIFORMS, &mut count);
+        }
+        println!("Active Uniforms: {count}");
+        let buf_size: usize = 64;
+        let mut uniform_type: GLenum = 0;
+        let mut length: GLsizei = 0;
+        let mut name: Vec<u8> = vec![0; buf_size];
+        let mut size: GLint = 0;
+
+        for i in 0..count {
+            unsafe {
+                gl::GetActiveUniform(
+                    self.id,
+                    i as GLuint,
+                    buf_size as i32,
+                    &mut length,
+                    &mut size,
+                    &mut uniform_type,
+                    mem::transmute(name.as_mut_ptr()),
+                );
+            }
+            let name_utf8: &str =
+                std::str::from_utf8(&name[0..length as usize]).expect("utf8 name");
+            println!("Uniform type: {uniform_type} name: {name_utf8}");
+        }
     }
 }
 

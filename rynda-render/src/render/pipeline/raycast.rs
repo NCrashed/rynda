@@ -8,14 +8,14 @@ use crate::render::{
         compile::{Shader, ShaderType},
         program::ShaderProgram,
     },
-    texture::Texture,
+    texture::{Texture, TextureFormat},
 };
 use rynda_format::types::{pointermap::PointerColumn, volume::RleVolume};
 
 /// Pipeline that renders raycast to a texture
 pub struct RaycastPipeline<'a> {
     pub program: ShaderProgram,
-    pub texture: Texture,
+    pub texture: Texture<{TextureFormat::RGBA}>,
     pub image_dimensions: (u32, u32),
     pub pointmap_buffer: ShaderBuffer<PointerColumn>,
     pub volume: &'a RleVolume,

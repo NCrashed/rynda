@@ -31,12 +31,12 @@ static QUAD_INDEX_DATA: [GLshort; 4] = [1, 2, 0, 3];
 
 impl TexturePipeline {
     pub fn new(vertex_shader: &str, fragment_shader: &str, width: u32, height: u32) -> Self {
-        let texture = Texture::new(gl::TEXTURE1, width, height, None);
-        let framebuffer = FrameBuffer::new(texture);
-
         let vs = Shader::compile(ShaderType::Vertex, vertex_shader);
         let fs = Shader::compile(ShaderType::Fragment, fragment_shader);
         let program = ShaderProgram::link(vec![vs, fs]);
+        
+        let texture = Texture::new(gl::TEXTURE1, width, height, None);
+        let framebuffer = FrameBuffer::new(texture);
 
         let vao = VertexArray::new();
         let vbo: VertexBuffer<GLfloat> = VertexBuffer::new(&QUAD_POSITION_DATA);
@@ -66,8 +66,6 @@ impl Pipeline for TexturePipeline {
     }
 
     fn draw(&self) {
-        unsafe {
-            self.ebo.draw();
-        }
+        self.ebo.draw();
     }
 }
