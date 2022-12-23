@@ -42,9 +42,8 @@ impl Texture<{ TextureFormat::RGBA }> {
             gl::TexParameteri(
                 gl::TEXTURE_2D,
                 gl::TEXTURE_MIN_FILTER,
-                gl::NEAREST_MIPMAP_NEAREST as GLint,
+                gl::NEAREST as GLint,
             );
-            gl::GenerateMipmap(gl::TEXTURE_2D);
         }
         Texture {
             id: tex_id,

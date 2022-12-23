@@ -18,8 +18,8 @@ impl Camera {
             transform: Transform::new(),
             fov: std::f32::consts::PI / 6.0,
             aspect: 1.0,
-            near: 0.01,
-            far: 100.0,
+            near: 0.0001,
+            far: 1000.0,
         }
     }
 
@@ -29,8 +29,8 @@ impl Camera {
             transform: Transform::look_at(eye, target, Vec3::Y),
             fov: std::f32::consts::PI / 6.0,
             aspect: 1.0,
-            near: 0.01,
-            far: 100.0,
+            near: 0.0001,
+            far: 1000.0,
         }
     }
 

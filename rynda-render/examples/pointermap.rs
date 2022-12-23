@@ -87,7 +87,7 @@ fn main() {
         );
         pointmap_texture.bind(0);
 
-        texture_pipeline.program.set_uniform("pointermap", &0u32);
+        texture_pipeline.program.set_uniform("pointermap", &0i32);
         texture_pipeline.draw();
 
         quad_pipeline.bind_draw();
