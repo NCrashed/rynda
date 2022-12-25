@@ -13,6 +13,30 @@ pub trait VertexAttribute {
     fn element_type_id() -> GLuint;
 }
 
+impl VertexAttribute for GLint {
+    type Element = GLint;
+
+    fn elements_count() -> GLint {
+        1
+    }
+
+    fn element_type_id() -> GLuint {
+        gl::INT
+    }
+}
+
+impl VertexAttribute for GLshort {
+    type Element = GLshort;
+
+    fn elements_count() -> GLint {
+        1
+    }
+
+    fn element_type_id() -> GLuint {
+        gl::SHORT
+    }
+}
+
 impl VertexAttribute for Vec2 {
     type Element = GLfloat;
 

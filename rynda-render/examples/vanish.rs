@@ -1,135 +1,122 @@
 extern crate gl;
 extern crate glfw;
 
-use glfw::{Action, Context, CursorMode, Key};
+use glam::{UVec3, Vec3};
+use glfw::{Action, Context, Key, CursorMode};
 use ndarray::Array3;
 use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
-use rynda_render::{
-    math::{aabb::HasBounding, transform::Transform},
-    render::{
-        camera::Camera,
-        debug::enable_gl_debug,
-        pipeline::{
-            debug::{DebugLine, DebugPipeline},
-            generic::Pipeline,
-            quad::QuadPipeline,
-            // raycast::RaycastPipeline,
-            vanish::VanishPointPipeline,
-        },
-    },
-    scene::chunk::ChunkedModel,
+use rynda_render::render::{
+    buffer::texture::Texture,
+    camera::Camera,
+    debug::enable_gl_debug,
+    pipeline::{generic::Pipeline, quad::QuadPipeline, vanish::VanishPipeline},
 };
-
-use glam::{IVec3, Mat4, Vec3};
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::Resizable(true));
-    let screen_size = (1024, 1024);
+    glfw.window_hint(glfw::WindowHint::Resizable(false));
+    let width = 2048;
+    let height = 1024;
     let (mut window, events) = glfw
         .create_window(
-            screen_size.0,
-            screen_size.1,
-            "Rynda vanishing point test",
+            width,
+            height,
+            "Rynda texture target test",
             glfw::WindowMode::Windowed,
         )
         .expect("Failed to create GLFW window.");
 
-    window.set_key_polling(true);
-    window.set_framebuffer_size_polling(true);
-    window.set_cursor_pos_polling(true);
-    window.set_cursor_mode(CursorMode::Disabled);
-    window.make_current();
+        window.set_key_polling(true);
+        window.set_framebuffer_size_polling(true);
+        window.set_cursor_pos_polling(true);
+        window.set_cursor_mode(CursorMode::Disabled);
+        window.make_current();
 
     // Load the OpenGL function pointers3
     gl::load_with(|s| window.get_proc_address(s) as *const _);
     enable_gl_debug();
 
-    let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
-        let sx = (x as isize) - 128;
-        let sz = (z as isize) - 128;
-        let sy = (y as isize) - 256;
-        if sx * sx + sz * sz + sy * sy < 64 * 64 {
-            RgbVoxel::only_red(1)
-        } else {
-            RgbVoxel::empty()
-        }
-    });
-    let volume: RleVolume = voxels.into();
-    let mut model = ChunkedModel::new();
-    model.transform = Transform::translation(Vec3::new(-1.0, -1.0, -1.0));
-    model.add_chunk(IVec3::new(0, 0, 0), volume);
+    // let z = RgbVoxel::empty();
+    // let r = RgbVoxel::only_red(1);
+    // let voxels: Array3<RgbVoxel> = ndarray::arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
 
-    let vertex_shader =
-        str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
-    let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
-    let vanish_shader =
-        str::from_utf8(include_bytes!("../shaders/vanishpoint_compute.glsl")).unwrap();
-    let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug_vertex.glsl")).unwrap();
-    let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug_fragment.glsl")).unwrap();
+    // let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
+    //     let sx = (x as isize) - 128;
+    //     let sz = (z as isize) - 128;
+    //     let sy = (y as isize) - 256;
+    //     if sx * sx + sz * sz + sy * sy < 64 * 64 {
+    //         RgbVoxel::only_red(1)
+    //     } else {
+    //         RgbVoxel::empty()
+    //     }
+    // });
 
-    let mut camera = Camera::look_at(Vec3::new(0.0, 2.0, -5.0), Vec3::ZERO);
-    camera.near = 1.0;
-    camera.far = 10.0;
-    let mut debug_camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
+    // let volume: RleVolume = voxels.into();
+    // let pointmap_texture = Texture::from_pointermap(gl::TEXTURE0, &volume);
 
-    let mut vanish_pipeline =
-        VanishPointPipeline::new(vanish_shader, screen_size.0, screen_size.1, &camera);
-    let quad_pipeline = QuadPipeline::new(vertex_shader, fragment_shader, &vanish_pipeline.texture);
-    let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
+    let mut camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
+
+    let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
+    let vanish_vertex = str::from_utf8(include_bytes!("../shaders/vanish_vertex.glsl")).unwrap();
+    let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
+    let segment_fragment =
+        str::from_utf8(include_bytes!("../shaders/segment_fragment.glsl")).unwrap();
+    let vanish_fragment =
+        str::from_utf8(include_bytes!("../shaders/vanish_fragment.glsl")).unwrap();
+
+    let mut vanish_pipeline = VanishPipeline::new(
+        quad_vertex,
+        segment_fragment,
+        vanish_vertex,
+        vanish_fragment,
+        width,
+        height,
+        camera.clone(),
+    );
+
+    let mut quad_pipeline = QuadPipeline::new(
+        quad_vertex,
+        quad_fragment,
+        &vanish_pipeline.framebuffer.color_buffer,
+        width,
+        height
+    );
 
     let (cx0, cy0) = window.get_cursor_pos();
-    let mut events_ctx = EventContext {
-        old_cx: cx0,
-        old_cy: cy0,
-        ..Default::default()
-    };
+    let mut events_ctx = EventContext::new(width, height);
+    events_ctx.old_cx = cx0;
+    events_ctx.old_cy = cy0;
 
     while !window.should_close() {
-        let active_camera = if events_ctx.mode == 0 {
-            &mut debug_camera
-        } else {
-            &mut camera
-        };
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event, &mut events_ctx, active_camera);
+            handle_window_event(&mut window, event, &mut events_ctx, &mut camera);
         }
-        events_ctx.move_camera(active_camera);
+        events_ctx.move_camera(&mut camera);
+        vanish_pipeline.camera = camera.clone();
+        quad_pipeline.width = events_ctx.width;
+        quad_pipeline.height = events_ctx.height;
+        
+        vanish_pipeline.bind();
+        // unsafe {
+        //     // Clear the screen
+        //     gl::ClearColor(1.0, 1.0, 1.0, 1.0);
+        //     gl::Clear(gl::COLOR_BUFFER_BIT);
+        // }
+        // vanish_pipeline
+        //     .program
+        //     .set_uniform("mode", &(events_ctx.mode as i32));
+        // vanish_pipeline.program.set_uniform(
+        //     "volume_size",
+        //     &UVec3::new(volume.xsize, volume.ysize, volume.zsize),
+        // );
+        // pointmap_texture.bind(0);
+        // vanish_pipeline.program.set_uniform("pointermap", &0i32);
+        vanish_pipeline.draw();
 
-        unsafe {
-            // Clear the screen
-            gl::ClearColor(1.0, 1.0, 1.0, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
-
-        if events_ctx.mode == 0 {
-            debug_pipeline.bind();
-            let mvp = debug_camera.matrix();
-            let camera_lines = DebugLine::from_vec(camera.lines(), Vec3::new(1.0, 0.0, 0.0));
-            let volume_lines =
-                DebugLine::from_vec(model.bounding_box().lines(), Vec3::new(0.0, 1.0, 0.0));
-
-            debug_pipeline.set_lines(&[camera_lines, volume_lines].concat());
-            debug_pipeline.set_mvp(&mvp);
-            debug_pipeline.draw();
-        } else {
-            vanish_pipeline.bind();
-            vanish_pipeline.camera = camera.clone();
-
-            let vp_screen = camera.vanishing_point_window(screen_size.0, screen_size.1);
-
-            vanish_pipeline
-                .program
-                .set_uniform("vanish_point", &vp_screen);
-            vanish_pipeline.draw();
-
-            quad_pipeline.bind();
-            quad_pipeline.program.set_uniform("MVP", &Mat4::IDENTITY);
-            quad_pipeline.draw();
-        }
+        quad_pipeline.bind_draw();
 
         window.swap_buffers();
     }
@@ -146,10 +133,12 @@ struct EventContext {
     pub right: bool,
     pub up: bool,
     pub down: bool,
+    pub width: u32,
+    pub height: u32,
 }
 
-impl Default for EventContext {
-    fn default() -> Self {
+impl EventContext {
+    fn new(width: u32, height: u32) -> Self {
         EventContext {
             mode: 0,
             old_cx: 0.,
@@ -158,6 +147,7 @@ impl Default for EventContext {
             right: false,
             up: false,
             down: false,
+            width, height
         }
     }
 }
@@ -209,6 +199,8 @@ fn handle_window_event(
         glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
             gl::Viewport(0, 0, width, height);
             camera.aspect = width as f32 / height as f32;
+            ctx.width = width as u32;
+            ctx.height = height as u32;
         },
         glfw::WindowEvent::CursorPos(cx, cy) => {
             let dx = (cx - ctx.old_cx) * MOUSE_ROTATION_SPEED;

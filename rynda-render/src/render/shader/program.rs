@@ -125,6 +125,36 @@ impl ShaderProgram {
             println!("Uniform type: {uniform_type} name: {name_utf8}");
         }
     }
+
+    pub fn print_attributes(&self) {
+        let mut count = 0;
+        unsafe {
+            gl::GetProgramiv(self.id, gl::ACTIVE_ATTRIBUTES, &mut count);
+        }
+        println!("Active Attributes: {count}");
+        let buf_size: usize = 64;
+        let mut attribute_type: GLenum = 0;
+        let mut length: GLsizei = 0;
+        let mut name: Vec<u8> = vec![0; buf_size];
+        let mut size: GLint = 0;
+
+        for i in 0..count {
+            unsafe {
+                gl::GetActiveAttrib(
+                    self.id,
+                    i as GLuint,
+                    buf_size as i32,
+                    &mut length,
+                    &mut size,
+                    &mut attribute_type,
+                    mem::transmute(name.as_mut_ptr()),
+                );
+            }
+            let name_utf8: &str =
+                std::str::from_utf8(&name[0..length as usize]).expect("utf8 name");
+            println!("Attribute type: {attribute_type} name: {name_utf8}");
+        }
+    }
 }
 
 impl Drop for ShaderProgram {

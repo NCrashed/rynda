@@ -23,6 +23,8 @@ pub struct QuadPipeline<'a> {
     pub texture: &'a Texture<{ TextureFormat::RGBA }>,
     pub vbo: VertexBuffer<GLfloat>,
     pub ebo: IndexBuffer<GLshort>,
+    pub width: u32, 
+    pub height: u32,
 }
 
 static QUAD_POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
@@ -33,6 +35,8 @@ impl<'a> QuadPipeline<'a> {
         vertex_shader: &str,
         fragment_shader: &str,
         texture: &'a Texture<{ TextureFormat::RGBA }>,
+        width: u32,
+        height: u32,
     ) -> Self {
         let vs = Shader::compile(ShaderType::Vertex, vertex_shader);
         let fs = Shader::compile(ShaderType::Fragment, fragment_shader);
@@ -49,17 +53,14 @@ impl<'a> QuadPipeline<'a> {
             texture,
             vbo,
             ebo,
+            width, 
+            height,
         }
     }
 }
 
 impl<'a> Pipeline for QuadPipeline<'a> {
     fn bind(&self) {
-        // Bind render target screen
-        unsafe {
-            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-        }
-
         // Bind vertex array
         self.vao.bind();
 
@@ -79,6 +80,10 @@ impl<'a> Pipeline for QuadPipeline<'a> {
     }
 
     fn draw(&self) {
+        unsafe {
+            // Set the whole window as viewport
+            gl::Viewport(0, 0, self.width as i32, self.height as i32);
+        }
         self.ebo.draw();
     }
 }

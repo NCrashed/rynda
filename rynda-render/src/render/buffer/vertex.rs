@@ -30,7 +30,7 @@ impl<T> VertexBuffer<T> {
         }
     }
 
-    pub fn load(&mut self, data: &[T]) {
+    pub fn load(&self, data: &[T]) {
         if !data.is_empty() {
             unsafe {
                 gl::BindBuffer(gl::ARRAY_BUFFER, self.id);

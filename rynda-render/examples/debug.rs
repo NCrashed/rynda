@@ -72,10 +72,12 @@ fn main() {
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug_fragment.glsl")).unwrap();
 
     let texture_pipeline = TexturePipeline::new(quad_vertex, compute_shader, width, height);
-    let quad_pipeline = QuadPipeline::new(
+    let mut quad_pipeline = QuadPipeline::new(
         vertex_shader,
         fragment_shader,
         &texture_pipeline.framebuffer.color_buffer,
+        width,
+        height,
     );
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
 
@@ -85,11 +87,7 @@ fn main() {
     let mut debug_camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
     let (cx0, cy0) = window.get_cursor_pos();
-    let mut events_ctx = EventContext {
-        old_cx: cx0,
-        old_cy: cy0,
-        ..Default::default()
-    };
+    let mut events_ctx = EventContext::new(cx0, cy0, width, height);
 
     while !window.should_close() {
         let active_camera = if events_ctx.mode == 0 {
@@ -102,6 +100,8 @@ fn main() {
             handle_window_event(&mut window, event, &mut events_ctx, active_camera);
         }
         events_ctx.move_camera(active_camera);
+        quad_pipeline.width = events_ctx.width;
+        quad_pipeline.height = events_ctx.height;
 
         texture_pipeline.bind();
         unsafe {
@@ -119,7 +119,8 @@ fn main() {
         pointmap_texture.bind(0);
         texture_pipeline.program.set_uniform("pointermap", &0i32);
         texture_pipeline.draw();
-
+        texture_pipeline.unbind();
+        
         quad_pipeline.bind();
         unsafe {
             // Clear the screen
@@ -157,18 +158,22 @@ struct EventContext {
     pub right: bool,
     pub up: bool,
     pub down: bool,
+    pub width: u32,
+    pub height: u32,
 }
 
-impl Default for EventContext {
-    fn default() -> Self {
+impl EventContext {
+    fn new(old_cx: f64, old_cy: f64, width: u32, height: u32) -> Self {
         EventContext {
             mode: 0,
-            old_cx: 0.,
-            old_cy: 0.,
+            old_cx,
+            old_cy,
             left: false,
             right: false,
             up: false,
             down: false,
+            width, 
+            height
         }
     }
 }
@@ -217,9 +222,13 @@ fn handle_window_event(
         glfw::WindowEvent::Key(Key::Right | Key::D, _, state, _) => {
             ctx.right = state != Action::Release;
         }
-        glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
-            gl::Viewport(0, 0, width, height);
+        glfw::WindowEvent::FramebufferSize(width, height) => {
+            unsafe {
+                gl::Viewport(0, 0, width, height);
+            }
             camera.aspect = width as f32 / height as f32;
+            ctx.width = width as u32;
+            ctx.height = height as u32;
         },
         glfw::WindowEvent::CursorPos(cx, cy) => {
             let dx = (cx - ctx.old_cx) * MOUSE_ROTATION_SPEED;

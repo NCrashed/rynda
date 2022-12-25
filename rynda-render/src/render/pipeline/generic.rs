@@ -6,9 +6,13 @@ pub trait Pipeline {
     /// Perform drawing call
     fn draw(&self);
 
+    /// Unbind buffers if needed
+    fn unbind(&self) {}
+
     /// Shorcut for bind and draw calls
     fn bind_draw(&self) {
         self.bind();
         self.draw();
+        self.unbind();
     }
 }

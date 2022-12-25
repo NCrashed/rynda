@@ -1,6 +1,6 @@
 use gl::types::*;
-use glam::Vec2;
 use std::str;
+use glam::Vec2;
 
 use super::generic::Pipeline;
 use crate::render::{
@@ -8,8 +8,8 @@ use crate::render::{
     buffer::{
         frame::FrameBuffer,
         index::{IndexBuffer, PrimitiveType},
-        texture::Texture,
         vertex::VertexBuffer,
+        texture::Texture,
     },
     shader::{
         compile::{Shader, ShaderType},
@@ -55,17 +55,27 @@ impl TexturePipeline {
 
 impl Pipeline for TexturePipeline {
     fn bind(&self) {
-        // Bind framebuffer
+        // Bind framebuffer 
         self.framebuffer.bind();
+
         // Bind vertex array
         self.vao.bind();
 
         // Use quad program
         self.program.use_program();
+        // let width = self.framebuffer.color_buffer.width;
+        // let height = self.framebuffer.color_buffer.height;
+        // self.program.set_uniform("aspect", &(width as f32 / height as f32 ));
         self.program.bind_attribute::<Vec2>("position", &self.vbo);
     }
 
     fn draw(&self) {
         self.ebo.draw();
+    }
+
+    fn unbind(&self) {
+        unsafe {
+            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+        }
     }
 }

@@ -16,9 +16,9 @@ use rynda_render::render::{
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::Resizable(false));
-    let width = 1024;
-    let height = 1024;
+    glfw.window_hint(glfw::WindowHint::Resizable(true));
+    let mut width = 1024;
+    let mut height = 1024;
     let (mut window, events) = glfw
         .create_window(
             width,
@@ -49,25 +49,23 @@ fn main() {
     let texture_pipeline = TexturePipeline::new(quad_vertex, texture_fragment, width, height);
     texture_pipeline.program.print_uniforms();
 
-    let quad_pipeline = QuadPipeline::new(
+    let mut quad_pipeline = QuadPipeline::new(
         quad_vertex,
         quad_fragment,
         &texture_pipeline.framebuffer.color_buffer,
+        width, height
     );
 
     let mut mode: u32 = 0;
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event, &mut mode);
+            handle_window_event(&mut window, event, &mut mode, &mut width, &mut height);
         }
-
+        quad_pipeline.width = width; 
+        quad_pipeline.height = height; 
+        
         texture_pipeline.bind();
-        unsafe {
-            // Clear the screen
-            gl::ClearColor(1.0, 1.0, 1.0, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
         texture_pipeline.program.set_uniform("mode", &(mode as i32));
         texture_pipeline.program.set_uniform(
             "volume_size",
@@ -77,14 +75,21 @@ fn main() {
 
         texture_pipeline.program.set_uniform("pointermap", &0i32);
         texture_pipeline.draw();
+        texture_pipeline.unbind();
 
-        quad_pipeline.bind_draw();
+        quad_pipeline.bind();
+        unsafe {
+            // Clear the screen
+            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+        quad_pipeline.draw();
 
         window.swap_buffers();
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, mode: &mut u32) {
+fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, mode: &mut u32, cwidth: &mut u32, cheight: &mut u32,) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => window.set_should_close(true),
         glfw::WindowEvent::Key(Key::Space, _, Action::Press, _) => {
@@ -94,8 +99,12 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, mode
                 *mode = 0;
             }
         }
-        glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
-            gl::Viewport(0, 0, width, height);
+        glfw::WindowEvent::FramebufferSize(width, height) => {
+            unsafe {
+                gl::Viewport(0, 0, width, height);
+            }
+            *cwidth = width as u32;
+            *cheight = height as u32;
         },
         _ => {}
     }

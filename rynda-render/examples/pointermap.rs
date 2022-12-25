@@ -10,12 +10,12 @@ use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
     buffer::texture::Texture,
     debug::enable_gl_debug,
-    pipeline::{generic::Pipeline, quad::QuadPipeline, texture::TexturePipeline},
+    pipeline::{generic::Pipeline, quad::{QuadPipeline, self}, texture::TexturePipeline},
 };
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
-    glfw.window_hint(glfw::WindowHint::Resizable(false));
+    glfw.window_hint(glfw::WindowHint::Resizable(true));
     let width = 1024;
     let height = 1024;
     let (mut window, events) = glfw
@@ -54,41 +54,53 @@ fn main() {
     let pointmap_texture = Texture::from_pointermap(gl::TEXTURE0, &volume);
 
     let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
+    let quad_vertex_transform =
+        str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
     let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
     let texture_fragment =
         str::from_utf8(include_bytes!("../shaders/pointermap_fragment.glsl")).unwrap();
 
-    let texture_pipeline = TexturePipeline::new(quad_vertex, texture_fragment, width, height);
-    texture_pipeline.program.print_uniforms();
+    let texture_pipeline = TexturePipeline::new(quad_vertex_transform, texture_fragment, width, height);
 
-    let quad_pipeline = QuadPipeline::new(
+    let mut quad_pipeline = QuadPipeline::new(
         quad_vertex,
         quad_fragment,
         &texture_pipeline.framebuffer.color_buffer,
+        width,
+        height,
     );
 
-    let mut mode: u32 = 0;
+    let mut ctx = EventContext::new(width, height);
     while !window.should_close() {
         glfw.poll_events();
         for (_, event) in glfw::flush_messages(&events) {
-            handle_window_event(&mut window, event, &mut mode);
+            handle_window_event(&mut window, event, &mut ctx);
         }
+        quad_pipeline.width = ctx.width;
+        quad_pipeline.height = ctx.height;
+        let aspect = ctx.width as f32 / ctx.height as f32;
+        let aspect_mvp =
+            glam::Mat4::orthographic_rh_gl(-1.0 * aspect, 1.0 * aspect, -1.0, 1.0, -1.0, 1.0);
 
         texture_pipeline.bind();
         unsafe {
             // Clear the screen
-            gl::ClearColor(1.0, 1.0, 1.0, 1.0);
+            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
-        texture_pipeline.program.set_uniform("mode", &(mode as i32));
+        texture_pipeline
+            .program
+            .set_uniform("mode", &(ctx.mode as i32));
         texture_pipeline.program.set_uniform(
             "volume_size",
             &UVec3::new(volume.xsize, volume.ysize, volume.zsize),
         );
+        texture_pipeline.program.set_uniform("MVP", &aspect_mvp);
         pointmap_texture.bind(0);
 
         texture_pipeline.program.set_uniform("pointermap", &0i32);
         texture_pipeline.draw();
+        texture_pipeline.unbind();
 
         quad_pipeline.bind_draw();
 
@@ -96,18 +108,40 @@ fn main() {
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, mode: &mut u32) {
+struct EventContext {
+    pub mode: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
+impl EventContext {
+    pub fn new(width: u32, height: u32) -> Self {
+        EventContext {
+            mode: 0,
+            width,
+            height,
+        }
+    }
+}
+
+fn handle_window_event(
+    window: &mut glfw::Window,
+    event: glfw::WindowEvent,
+    ctx: &mut EventContext,
+) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => window.set_should_close(true),
         glfw::WindowEvent::Key(Key::Space, _, Action::Press, _) => {
-            if *mode == 0 {
-                *mode = 1;
+            if ctx.mode == 0 {
+                ctx.mode = 1;
             } else {
-                *mode = 0;
+                ctx.mode = 0;
             }
         }
         glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
             gl::Viewport(0, 0, width, height);
+            ctx.width = width as u32;
+            ctx.height = height as u32;
         },
         _ => {}
     }

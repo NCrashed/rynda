@@ -14,10 +14,12 @@ use rynda_render::render::{
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::Resizable(true));
+    let width = 1024;
+    let height = 1024;
     let (mut window, events) = glfw
         .create_window(
-            1024,
-            1024,
+            width,
+            height,
             "Rynda pointmap test",
             glfw::WindowMode::Windowed,
         )
@@ -52,7 +54,7 @@ fn main() {
         str::from_utf8(include_bytes!("../shaders/pointermap_compute.glsl")).unwrap();
     let raycast_pipeline = RaycastPipeline::new(compute_shader, &volume);
     let quad_pipeline =
-        QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture);
+        QuadPipeline::new(vertex_shader, fragment_shader, &raycast_pipeline.texture, width, height);
 
     let mut mode: u32 = 0;
     while !window.should_close() {
