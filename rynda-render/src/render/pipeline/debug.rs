@@ -107,7 +107,7 @@ impl DebugPipeline {
 }
 
 impl Pipeline for DebugPipeline {
-    fn bind(&self) {
+    fn bind(&mut self) {
         // Bind vertex array
         self.vao.bind();
 

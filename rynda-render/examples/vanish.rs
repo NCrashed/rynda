@@ -73,7 +73,7 @@ fn main() {
         vanish_fragment,
         width,
         height,
-        camera.clone(),
+        &camera,
     );
 
     let mut quad_pipeline = QuadPipeline::new(

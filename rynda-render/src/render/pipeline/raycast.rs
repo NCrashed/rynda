@@ -42,7 +42,7 @@ impl<'a> RaycastPipeline<'a> {
 }
 
 impl<'a> Pipeline for RaycastPipeline<'a> {
-    fn bind(&self) {
+    fn bind(&mut self) {
         self.program.use_program();
 
         unsafe {

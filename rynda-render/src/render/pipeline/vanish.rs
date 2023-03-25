@@ -39,18 +39,33 @@ pub struct VanishPipeline {
 }
 
 /// In trangle fan ordering
-fn vanish_mesh(vp: Vec2) -> Vec<GLfloat> {
-    let mut verts = vec![
-         0.0, 0.0,
-        -1.0, -1.0, 
-         1.0, -1.0,  
-         1.0,  1.0, 
-        -1.0,  1.0
-    ];
-    dbg!(vp);
-    verts[0] = vp.x;
-    verts[1] = vp.y;
-    verts
+fn vanish_mesh(vp: Vec2, aspect: f32) -> (Vec<GLfloat>, Vec<GLshort>) {
+    let mut verts = Vec::with_capacity(5);
+    let mut ids = Vec::with_capacity(12);
+    let x3 = 1.0 - vp.y + vp.x;
+    let x4 = vp.y - 1.0 + vp.x;
+    if vp.y < 1.0 && x3 > -aspect && x4 < aspect {
+        verts.extend_from_slice(&[
+            vp.x, vp.y, 
+            x3, 1.0,
+            x4, 1.0,
+        ]);
+        ids.extend_from_slice(&[
+            0, 1, 2
+        ]);
+    }
+    (verts, ids)
+    // let mut verts = vec![
+    //      0.0, 0.0,
+    //     -1.0, -1.0, 
+    //      1.0, -1.0,  
+    //      1.0,  1.0, 
+    //     -1.0,  1.0
+    // ];
+    // dbg!(vp);
+    // verts[0] = vp.x;
+    // verts[1] = vp.y;
+    // verts
 }
 
 // static VANISH_INDEX_DATA: [GLshort; 12] = [0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 1];
@@ -69,7 +84,7 @@ impl VanishPipeline {
         collect_fragment_shader: &str,
         width: u32,
         height: u32,
-        camera: Camera,
+        camera: &Camera,
     ) -> Self {
         let vs = Shader::compile(ShaderType::Vertex, segment_vertex_shader);
         let fs = Shader::compile(ShaderType::Fragment, segment_fragment_shader);
@@ -98,12 +113,12 @@ impl VanishPipeline {
 
         let vp_screen = camera.vanishing_point_window(width, height);
         let vp = vp_screen / Vec2::new(width as f32, height as f32)*2.0 - 1.0;
-        let mesh = vanish_mesh(vp);
+        let (mesh_vecs, mesh_ids) = vanish_mesh(vp, camera.aspect);
         let vao_vanish = VertexArray::new();
-        let vbo_vanish: VertexBuffer<GLfloat> = VertexBuffer::new(&mesh);
+        let vbo_vanish: VertexBuffer<GLfloat> = VertexBuffer::new(&mesh_vecs);
         let sbo_vanish: VertexBuffer<GLint> = VertexBuffer::new(&SEGMENT_DATA);
         let ebo_vanish: IndexBuffer<GLshort> =
-            IndexBuffer::new(PrimitiveType::Triangles, &VANISH_INDEX_DATA);
+            IndexBuffer::new(PrimitiveType::Triangles, &mesh_ids);
 
         VanishPipeline {
             framebuffer_top,
@@ -120,14 +135,14 @@ impl VanishPipeline {
             vbo_vanish,
             sbo_vanish,
             ebo_vanish,
-            camera,
+            camera: camera.clone(),
         }
     }
 }
 
 impl Pipeline for VanishPipeline {
     // Bind actually binds all for segment rendering, not the collecting phase
-    fn bind(&self) {
+    fn bind(&mut self) {
         // Shared between all segments
         self.vao_quad.bind();
         self.vbo_quad.bind();
@@ -135,9 +150,7 @@ impl Pipeline for VanishPipeline {
         self.segment_program.use_program();
         self.segment_program
             .bind_attribute::<Vec2>("position", &self.vbo_quad);
-    }
 
-    fn draw(&self) {
         // Vanishing point of the camera defines which segments are visible
         let width = self.framebuffer.color_buffer.width;
         let height = self.framebuffer.color_buffer.height;
@@ -185,8 +198,9 @@ impl Pipeline for VanishPipeline {
         self.vao_vanish.bind();
         self.ebo_vanish.bind();
         let vp = vp_screen / Vec2::new(width as f32, height as f32)*2.0 - 1.0;
-        let mesh = vanish_mesh(vp);
-        self.vbo_vanish.load(&mesh);
+        let (mesh_vecs, mesh_ids) = vanish_mesh(vp, self.camera.aspect);
+        self.vbo_vanish.load(&mesh_vecs);
+        self.ebo_vanish.load(&mesh_ids);
         self.collect_program.use_program();
         self.collect_program.print_attributes();
         self.collect_program
@@ -202,6 +216,12 @@ impl Pipeline for VanishPipeline {
         self.framebuffer_bottom.color_buffer.bind(1);
         self.framebuffer_left.color_buffer.bind(2);
         self.framebuffer_right.color_buffer.bind(3);
+    }
+
+    fn draw(&self) {
+        let width = self.framebuffer.color_buffer.width;
+        let height = self.framebuffer.color_buffer.height;
+
         unsafe {
             gl::Viewport(0, 0, width as i32, height as i32);
             gl::ClearColor(1.0, 1.0, 1.0, 1.0);

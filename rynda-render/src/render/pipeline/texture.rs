@@ -54,7 +54,7 @@ impl TexturePipeline {
 }
 
 impl Pipeline for TexturePipeline {
-    fn bind(&self) {
+    fn bind(&mut self) {
         // Bind framebuffer 
         self.framebuffer.bind();
 
@@ -73,7 +73,7 @@ impl Pipeline for TexturePipeline {
         self.ebo.draw();
     }
 
-    fn unbind(&self) {
+    fn unbind(&mut self) {
         unsafe {
             gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
         }

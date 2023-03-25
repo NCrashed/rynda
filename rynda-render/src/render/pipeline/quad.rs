@@ -17,10 +17,10 @@ use crate::render::{
 };
 
 /// Drawing pipeline that draws a single quad with given texture
-pub struct QuadPipeline<'a> {
+pub struct QuadPipeline {
     pub program: ShaderProgram,
     pub vao: VertexArray,
-    pub texture: &'a Texture<{ TextureFormat::RGBA }>,
+    pub texture: GLuint,
     pub vbo: VertexBuffer<GLfloat>,
     pub ebo: IndexBuffer<GLshort>,
     pub width: u32, 
@@ -30,11 +30,11 @@ pub struct QuadPipeline<'a> {
 static QUAD_POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
 static QUAD_INDEX_DATA: [GLshort; 4] = [1, 2, 0, 3];
 
-impl<'a> QuadPipeline<'a> {
+impl QuadPipeline {
     pub fn new(
         vertex_shader: &str,
         fragment_shader: &str,
-        texture: &'a Texture<{ TextureFormat::RGBA }>,
+        texture: &Texture<{ TextureFormat::RGBA }>,
         width: u32,
         height: u32,
     ) -> Self {
@@ -50,7 +50,7 @@ impl<'a> QuadPipeline<'a> {
         QuadPipeline {
             program,
             vao,
-            texture,
+            texture: texture.id,
             vbo,
             ebo,
             width, 
@@ -59,8 +59,8 @@ impl<'a> QuadPipeline<'a> {
     }
 }
 
-impl<'a> Pipeline for QuadPipeline<'a> {
-    fn bind(&self) {
+impl Pipeline for QuadPipeline {
+    fn bind(&mut self) {
         // Bind vertex array
         self.vao.bind();
 
@@ -71,7 +71,7 @@ impl<'a> Pipeline for QuadPipeline<'a> {
         unsafe {
             // Bind output texture in Texture Unit 1
             gl::ActiveTexture(gl::TEXTURE1);
-            gl::BindTexture(gl::TEXTURE_2D, self.texture.id);
+            gl::BindTexture(gl::TEXTURE_2D, self.texture);
 
             // Set our "texture" sampler to use Texture Unit 1
             let tex_id = self.program.uniform_location("img_output");

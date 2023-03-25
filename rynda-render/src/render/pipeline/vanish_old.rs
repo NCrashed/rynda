@@ -36,7 +36,7 @@ impl VanishPointPipeline {
 }
 
 impl Pipeline for VanishPointPipeline {
-    fn bind(&self) {
+    fn bind(&mut self) {
         self.program.use_program();
 
         unsafe {
