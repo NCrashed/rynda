@@ -240,25 +240,25 @@ impl Pipeline for VanishPipeline {
         // First render all segments
         // Top segment
         if vp_screen.y > 0.0 {
-            self.segment_program.set_uniform("segment", &0i32);
+            self.segment_program.set_uniform::<GLfloat>("segment", &0.0);
             self.framebuffer_top.bind();
             self.ebo_quad.draw();
         }
         // Bottom segment
         if vp_screen.y < height as f32 {
-            self.segment_program.set_uniform("segment", &1i32);
+            self.segment_program.set_uniform::<GLfloat>("segment", &1.0);
             self.framebuffer_bottom.bind();
             self.ebo_quad.draw();
         }
         // Left segment
         if vp_screen.x > 0.0 {
-            self.segment_program.set_uniform("segment", &2i32);
+            self.segment_program.set_uniform::<GLfloat>("segment", &2.0);
             self.framebuffer_left.bind();
             self.ebo_quad.draw();
         }
         // Right segment
         if vp_screen.x < width as f32 {
-            self.segment_program.set_uniform("segment", &3i32);
+            self.segment_program.set_uniform::<GLfloat>("segment", &3.0);
             self.framebuffer_right.bind();
             self.ebo_quad.draw();
         }
@@ -276,7 +276,7 @@ impl Pipeline for VanishPipeline {
         self.collect_program
             .bind_attribute::<Vec2>("position", &self.vbo_vanish);
         self.collect_program.bind_attribute::<GLfloat>("segment", &self.sbo_vanish);
-        // self.collect_program.set_uniform("vp_point", &vp);
+        self.collect_program.set_uniform("vp_point", &vp);
         let aspect_mvp =
             glam::Mat4::orthographic_rh_gl(-1.0 * self.camera.aspect, 1.0 * self.camera.aspect, -1.0, 1.0, -1.0, 1.0);
         self.collect_program.set_uniform("MVP", &aspect_mvp);
