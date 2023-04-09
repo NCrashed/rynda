@@ -37,6 +37,18 @@ impl VertexAttribute for GLshort {
     }
 }
 
+impl VertexAttribute for GLfloat {
+    type Element = GLfloat;
+
+    fn elements_count() -> GLint {
+        1
+    }
+
+    fn element_type_id() -> GLuint {
+        gl::FLOAT
+    }
+}
+
 impl VertexAttribute for Vec2 {
     type Element = GLfloat;
 

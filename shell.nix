@@ -6,6 +6,7 @@ stdenv.mkDerivation rec {
 
   nativeBuildInputs = [ pkgconfig ];
   buildInputs = [
+    glslang
     rustup
     alsaLib
     xorg.libX11

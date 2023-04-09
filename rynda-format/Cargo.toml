@@ -12,4 +12,5 @@ authors = ["Anton Gushcha <ncrashed@protonmail.com>"]
 dot_vox = "4.1.0"
 modular-bitfield = "0.11.2"
 ndarray = "0.15.3"
+nom = "7.1.3"
 num-traits = "0.2.14"

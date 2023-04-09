@@ -58,9 +58,9 @@ fn main() {
 
     let mut camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
-    let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
+    let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad.vert")).unwrap();
     let vanish_vertex = str::from_utf8(include_bytes!("../shaders/vanish_vertex.glsl")).unwrap();
-    let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
+    let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad.frag")).unwrap();
     let segment_fragment =
         str::from_utf8(include_bytes!("../shaders/segment_fragment.glsl")).unwrap();
     let vanish_fragment =

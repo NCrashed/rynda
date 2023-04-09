@@ -33,45 +33,122 @@ pub struct VanishPipeline {
     pub ebo_quad: IndexBuffer<GLshort>,
     pub vao_vanish: VertexArray,
     pub vbo_vanish: VertexBuffer<GLfloat>,
-    pub sbo_vanish: VertexBuffer<GLint>,
+    pub sbo_vanish: VertexBuffer<GLfloat>,
     pub ebo_vanish: IndexBuffer<GLshort>,
     pub camera: Camera,
 }
 
-/// In trangle fan ordering
-fn vanish_mesh(vp: Vec2, aspect: f32) -> (Vec<GLfloat>, Vec<GLshort>) {
-    let mut verts = Vec::with_capacity(5);
-    let mut ids = Vec::with_capacity(12);
-    let x3 = 1.0 - vp.y + vp.x;
-    let x4 = vp.y - 1.0 + vp.x;
-    if vp.y < 1.0 && x3 > -aspect && x4 < aspect {
+/// Making triangles that converges in vanish point and ends on edges of screen. Simple
+/// geometry is involved.
+fn vanish_mesh(vp: Vec2, aspect: f32) -> (Vec<GLfloat>, Vec<GLshort>, Vec<GLfloat>) {
+    let verts_num = 4 * 3;
+    let mut verts = Vec::with_capacity(verts_num);
+    let mut ids = Vec::with_capacity(verts_num);
+    let mut segments = Vec::with_capacity(verts_num);
+    let mut i = 0;
+    // Right segment. Tan Pi/4 is 1, so segment vp-h is same as h-y02.
+    //     /* y02 
+    //    / |
+    //   /  |
+    //vp*---* h
+    //   \  |
+    //    \ |
+    //     \* y04
+    //  
+    let y02 = vp.y - (aspect - vp.x);
+    let y04 = vp.y + (aspect - vp.x);
+    if vp.x < aspect && y04 > -1.0 && y02 < 1.0 {
         verts.extend_from_slice(&[
             vp.x, vp.y, 
-            x3, 1.0,
-            x4, 1.0,
+            aspect, y04,
+            aspect, y02,
         ]);
         ids.extend_from_slice(&[
-            0, 1, 2
+            i, i+1, i+2
+        ]);
+        i += 3;
+        segments.extend_from_slice(&[
+            0.0, 0.0, 0.0,
         ]);
     }
-    (verts, ids)
-    // let mut verts = vec![
-    //      0.0, 0.0,
-    //     -1.0, -1.0, 
-    //      1.0, -1.0,  
-    //      1.0,  1.0, 
-    //     -1.0,  1.0
-    // ];
-    // dbg!(vp);
-    // verts[0] = vp.x;
-    // verts[1] = vp.y;
-    // verts
+
+    // Upper segment. Tan Pi/4 is 1, so segment vp-h is same as h-y02.
+    //   x11  h    x12
+    //   *----*----*
+    //    \   |   /
+    //     \  |  /
+    //      \ | /
+    //       \|/
+    //        * vp
+    let x11 = vp.x + (-1.0 - vp.y);
+    let x12 = vp.x - (-1.0 - vp.y);
+    if vp.y > -1.0 && x11 < aspect && x12 > -aspect {
+        verts.extend_from_slice(&[
+            vp.x, vp.y, 
+            x12, -1.0,
+            x11, -1.0,
+        ]);
+        ids.extend_from_slice(&[
+            i, i+1, i+2
+        ]);
+        i += 3;
+        segments.extend_from_slice(&[
+            1.0, 1.0, 1.0
+        ]);
+    }
+
+    // Left segment. Tan Pi/4 is 1, so segment vp-h is same as h-y02.
+    // y21*
+    //    |\
+    //    | \
+    //  h *--* vp
+    //    | /
+    //    |/
+    // y23*
+    //  
+    let y21 = vp.y + (-aspect - vp.x);
+    let y23 = vp.y - (-aspect - vp.x);
+    if vp.x > -aspect && y21 < 1.0 && y23 > -1.0 {
+        verts.extend_from_slice(&[
+            vp.x, vp.y, 
+            -aspect, y21,
+            -aspect, y23,
+        ]);
+        ids.extend_from_slice(&[
+            i, i+1, i+2
+        ]);
+        i += 3;
+        segments.extend_from_slice(&[
+            2.0, 2.0, 2.0
+        ]);
+    }
+
+    // Down segment. Tan Pi/4 is 1, so segment vp-h is same as h-y02.
+    //        * vp 
+    //       /|\
+    //      / | \
+    //     /  |  \
+    //    /   |   \
+    //   *----*----*
+    //   x33  h    x34
+    let x33 = vp.x - (1.0 - vp.y);
+    let x34 = vp.x + (1.0 - vp.y);
+    if vp.y < 1.0 && x33 < aspect && x34 > -aspect {
+        verts.extend_from_slice(&[
+            vp.x, vp.y, 
+            x33, 1.0,
+            x34, 1.0,
+        ]);
+        ids.extend_from_slice(&[
+            i, i+1, i+2
+        ]);
+        i += 3;
+        segments.extend_from_slice(&[
+            3.0, 3.0, 3.0
+        ]);
+    }
+    (verts, ids, segments)
 }
-
-// static VANISH_INDEX_DATA: [GLshort; 12] = [0, 1, 2, 0, 2, 3, 0, 3, 4, 0, 4, 1];
-static VANISH_INDEX_DATA: [GLshort; 3] = [0, 1, 2];
-
-static SEGMENT_DATA: [GLint; 12] = [1, 1, 1, 3, 3, 3, 0, 0, 0, 2, 2, 2];
 
 static QUAD_POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
 static QUAD_INDEX_DATA: [GLshort; 4] = [1, 2, 0, 3];
@@ -113,10 +190,10 @@ impl VanishPipeline {
 
         let vp_screen = camera.vanishing_point_window(width, height);
         let vp = vp_screen / Vec2::new(width as f32, height as f32)*2.0 - 1.0;
-        let (mesh_vecs, mesh_ids) = vanish_mesh(vp, camera.aspect);
+        let (mesh_vecs, mesh_ids, segments) = vanish_mesh(vp, camera.aspect);
         let vao_vanish = VertexArray::new();
         let vbo_vanish: VertexBuffer<GLfloat> = VertexBuffer::new(&mesh_vecs);
-        let sbo_vanish: VertexBuffer<GLint> = VertexBuffer::new(&SEGMENT_DATA);
+        let sbo_vanish: VertexBuffer<GLfloat> = VertexBuffer::new(&segments);
         let ebo_vanish: IndexBuffer<GLshort> =
             IndexBuffer::new(PrimitiveType::Triangles, &mesh_ids);
 
@@ -156,41 +233,33 @@ impl Pipeline for VanishPipeline {
         let height = self.framebuffer.color_buffer.height;
         let vp_screen = self.camera.vanishing_point_window(width, height);
 
+        unsafe {
+            gl::Viewport(0, 0, width as i32, height as i32);
+        }
+
         // First render all segments
         // Top segment
         if vp_screen.y > 0.0 {
             self.segment_program.set_uniform("segment", &0i32);
             self.framebuffer_top.bind();
-            unsafe {
-                gl::Viewport(0, 0, width as i32, height as i32);
-            }
             self.ebo_quad.draw();
         }
         // Bottom segment
         if vp_screen.y < height as f32 {
             self.segment_program.set_uniform("segment", &1i32);
             self.framebuffer_bottom.bind();
-            unsafe {
-                gl::Viewport(0, 0, width as i32, height as i32);
-            }
             self.ebo_quad.draw();
         }
         // Left segment
         if vp_screen.x > 0.0 {
             self.segment_program.set_uniform("segment", &2i32);
             self.framebuffer_left.bind();
-            unsafe {
-                gl::Viewport(0, 0, width as i32, height as i32);
-            }
             self.ebo_quad.draw();
         }
         // Right segment
         if vp_screen.x < width as f32 {
             self.segment_program.set_uniform("segment", &3i32);
             self.framebuffer_right.bind();
-            unsafe {
-                gl::Viewport(0, 0, width as i32, height as i32);
-            }
             self.ebo_quad.draw();
         }
 
@@ -198,15 +267,16 @@ impl Pipeline for VanishPipeline {
         self.vao_vanish.bind();
         self.ebo_vanish.bind();
         let vp = vp_screen / Vec2::new(width as f32, height as f32)*2.0 - 1.0;
-        let (mesh_vecs, mesh_ids) = vanish_mesh(vp, self.camera.aspect);
+        let (mesh_vecs, mesh_ids, segments) = vanish_mesh(vp, self.camera.aspect);
         self.vbo_vanish.load(&mesh_vecs);
         self.ebo_vanish.load(&mesh_ids);
+        self.sbo_vanish.load(&segments);
         self.collect_program.use_program();
-        self.collect_program.print_attributes();
+        // self.collect_program.print_attributes();
         self.collect_program
             .bind_attribute::<Vec2>("position", &self.vbo_vanish);
-        self.collect_program.bind_attribute::<GLint>("segment", &self.sbo_vanish);
-        self.collect_program.set_uniform("vp_point", &vp);
+        self.collect_program.bind_attribute::<GLfloat>("segment", &self.sbo_vanish);
+        // self.collect_program.set_uniform("vp_point", &vp);
         let aspect_mvp =
             glam::Mat4::orthographic_rh_gl(-1.0 * self.camera.aspect, 1.0 * self.camera.aspect, -1.0, 1.0, -1.0, 1.0);
         self.collect_program.set_uniform("MVP", &aspect_mvp);

@@ -46,8 +46,8 @@ impl Pipeline {
         let vs = Shader::compile(ShaderType::Vertex, vertex_shader);
         let fs = Shader::compile(ShaderType::Fragment, fragment_shader);
         let cs = Shader::compile(ShaderType::Compute, compute_shader);
-        let dvs = Shader::compile(ShaderType::Vertex, str::from_utf8(include_bytes!("../../shaders/debug_vertex.glsl")).unwrap());
-        let dfs = Shader::compile(ShaderType::Fragment, str::from_utf8(include_bytes!("../../shaders/debug_fragment.glsl")).unwrap());
+        let dvs = Shader::compile(ShaderType::Vertex, str::from_utf8(include_bytes!("../../shaders/debug.vert")).unwrap());
+        let dfs = Shader::compile(ShaderType::Fragment, str::from_utf8(include_bytes!("../../shaders/debug.frag")).unwrap());
         let program = ShaderProgram::link(vec![vs, fs]);
         let compute_program = ShaderProgram::link(vec![cs]);
         let debug_program = ShaderProgram::link(vec![dvs, dfs]);

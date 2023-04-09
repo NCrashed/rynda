@@ -57,11 +57,11 @@ fn main() {
 
     let pointmap_texture = Texture::from_pointermap(gl::TEXTURE0, &volume);
 
-    let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad_vertex.glsl")).unwrap();
-    let quad_mvp_vertex = str::from_utf8(include_bytes!("../shaders/quad_vertex_transform.glsl")).unwrap();
-    let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad_fragment.glsl")).unwrap();
+    let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad.vert")).unwrap();
+    let quad_mvp_vertex = str::from_utf8(include_bytes!("../shaders/quad_transform.vert")).unwrap();
+    let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad.frag")).unwrap();
     let texture_fragment =
-        str::from_utf8(include_bytes!("../shaders/pointermap_fragment.glsl")).unwrap();
+        str::from_utf8(include_bytes!("../shaders/pointermap.frag")).unwrap();
 
     let texture_pipeline = TexturePipeline::new(quad_vertex, texture_fragment, width, height);
     texture_pipeline.program.print_uniforms();

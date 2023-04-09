@@ -1,8 +1,8 @@
 #version 150
 in vec2 position;
-in int segment;
+in float segment;
 out vec2 tex_coords;
-flat out int segment_frag;
+out float segment_frag;
 
 uniform mat4 MVP;
 
