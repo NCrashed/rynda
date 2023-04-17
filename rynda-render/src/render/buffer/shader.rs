@@ -46,7 +46,7 @@ impl<T> ShaderBuffer<T> {
     /// Create SSBO and fill it with the data from range
     pub fn from(data: &[T]) -> Self {
         let mut id = 0;
-        let buffer_size = mem::size_of::<T>() * data.len();
+        let buffer_size = mem::size_of_val(data);
 
         unsafe {
             gl::GenBuffers(1, &mut id);

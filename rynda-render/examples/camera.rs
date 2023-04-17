@@ -60,8 +60,7 @@ fn main() {
     let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad.vert")).unwrap();
     let quad_mvp_vertex = str::from_utf8(include_bytes!("../shaders/quad_transform.vert")).unwrap();
     let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad.frag")).unwrap();
-    let texture_fragment =
-        str::from_utf8(include_bytes!("../shaders/pointermap.frag")).unwrap();
+    let texture_fragment = str::from_utf8(include_bytes!("../shaders/pointermap.frag")).unwrap();
 
     let mut texture_pipeline = TexturePipeline::new(quad_vertex, texture_fragment, width, height);
     texture_pipeline.program.print_uniforms();
@@ -71,7 +70,7 @@ fn main() {
         quad_fragment,
         &texture_pipeline.framebuffer.color_buffer,
         width,
-        height
+        height,
     );
 
     let mut camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
@@ -96,7 +95,9 @@ fn main() {
             gl::ClearColor(1.0, 1.0, 1.0, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
         }
-        texture_pipeline.program.set_uniform("mode", &(events_ctx.mode as i32));
+        texture_pipeline
+            .program
+            .set_uniform("mode", &(events_ctx.mode as i32));
         texture_pipeline.program.set_uniform(
             "volume_size",
             &UVec3::new(volume.xsize, volume.ysize, volume.zsize),
@@ -130,7 +131,7 @@ struct EventContext {
     pub right: bool,
     pub up: bool,
     pub down: bool,
-    pub width: u32, 
+    pub width: u32,
     pub height: u32,
 }
 
@@ -144,7 +145,8 @@ impl EventContext {
             right: false,
             up: false,
             down: false,
-            width, height
+            width,
+            height,
         }
     }
 }

@@ -59,7 +59,7 @@ impl RleVolume {
 
         let pointers;
         unsafe {
-            let num_pointers = (xsize * zsize) as usize;
+            let num_pointers = xsize * zsize;
             pointers =
                 alloc(Layout::array::<PointerColumn>(num_pointers).unwrap()) as *mut PointerColumn;
             for i in 0..num_pointers {
@@ -104,7 +104,7 @@ impl From<Array3<RgbVoxel>> for RleVolume {
         let mut columns: Vec<RleColumn> = vec![];
         let mut columns_offset: usize = 0;
         unsafe {
-            let num_pointers = (xsize * zsize) as usize;
+            let num_pointers = xsize * zsize;
             pointers =
                 alloc(Layout::array::<PointerColumn>(num_pointers).unwrap()) as *mut PointerColumn;
             for i in 0..num_pointers {

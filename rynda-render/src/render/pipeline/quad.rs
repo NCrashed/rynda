@@ -23,7 +23,7 @@ pub struct QuadPipeline {
     pub texture: GLuint,
     pub vbo: VertexBuffer<GLfloat>,
     pub ebo: IndexBuffer<GLshort>,
-    pub width: u32, 
+    pub width: u32,
     pub height: u32,
 }
 
@@ -53,7 +53,7 @@ impl QuadPipeline {
             texture: texture.id,
             vbo,
             ebo,
-            width, 
+            width,
             height,
         }
     }

@@ -1,6 +1,6 @@
 use gl::types::*;
 use std::marker::PhantomData;
-use std::{mem, ptr};
+use std::ptr;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum PrimitiveType {
@@ -75,8 +75,8 @@ impl<T> IndexBuffer<T> {
                 gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, self.id);
                 gl::BufferData(
                     gl::ELEMENT_ARRAY_BUFFER,
-                    (data.len() * mem::size_of::<T>()) as GLsizeiptr,
-                    mem::transmute(&data[0]),
+                    (std::mem::size_of_val(data)) as GLsizeiptr,
+                    &data[0] as *const T as *const std::ffi::c_void,
                     gl::STATIC_DRAW,
                 );
             }

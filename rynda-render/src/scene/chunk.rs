@@ -59,7 +59,7 @@ impl ChunkedModel {
         }
     }
 
-    pub fn get_chunk<'a>(&'a self, coords: IVec3) -> Option<&'a RleVolume> {
+    pub fn get_chunk(&self, coords: IVec3) -> Option<&RleVolume> {
         self.volumes.get(&coords)
     }
 }

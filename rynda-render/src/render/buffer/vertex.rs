@@ -36,8 +36,8 @@ impl<T> VertexBuffer<T> {
                 gl::BindBuffer(gl::ARRAY_BUFFER, self.id);
                 gl::BufferData(
                     gl::ARRAY_BUFFER,
-                    (data.len() * mem::size_of::<T>()) as GLsizeiptr,
-                    mem::transmute(&data[0]),
+                    mem::size_of_val(data) as GLsizeiptr,
+                    &data[0] as *const T as *const std::ffi::c_void,
                     gl::STATIC_DRAW,
                 );
             }

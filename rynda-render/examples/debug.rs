@@ -63,11 +63,9 @@ fn main() {
     let pointmap_texture = Texture::from_pointermap(gl::TEXTURE0, &volume);
 
     let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad.vert")).unwrap();
-    let vertex_shader =
-        str::from_utf8(include_bytes!("../shaders/quad_transform.vert")).unwrap();
+    let vertex_shader = str::from_utf8(include_bytes!("../shaders/quad_transform.vert")).unwrap();
     let fragment_shader = str::from_utf8(include_bytes!("../shaders/quad.frag")).unwrap();
-    let compute_shader =
-        str::from_utf8(include_bytes!("../shaders/pointermap.frag")).unwrap();
+    let compute_shader = str::from_utf8(include_bytes!("../shaders/pointermap.frag")).unwrap();
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug.vert")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug.frag")).unwrap();
 
@@ -120,7 +118,7 @@ fn main() {
         texture_pipeline.program.set_uniform("pointermap", &0i32);
         texture_pipeline.draw();
         texture_pipeline.unbind();
-        
+
         quad_pipeline.bind();
         unsafe {
             // Clear the screen
@@ -172,8 +170,8 @@ impl EventContext {
             right: false,
             up: false,
             down: false,
-            width, 
-            height
+            width,
+            height,
         }
     }
 }
@@ -229,7 +227,7 @@ fn handle_window_event(
             camera.aspect = width as f32 / height as f32;
             ctx.width = width as u32;
             ctx.height = height as u32;
-        },
+        }
         glfw::WindowEvent::CursorPos(cx, cy) => {
             let dx = (cx - ctx.old_cx) * MOUSE_ROTATION_SPEED;
             let dy = (cy - ctx.old_cy) * MOUSE_ROTATION_SPEED;

@@ -43,8 +43,7 @@ fn main() {
 
     let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad.vert")).unwrap();
     let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad.frag")).unwrap();
-    let texture_fragment =
-        str::from_utf8(include_bytes!("../shaders/pointermap.frag")).unwrap();
+    let texture_fragment = str::from_utf8(include_bytes!("../shaders/pointermap.frag")).unwrap();
 
     let mut texture_pipeline = TexturePipeline::new(quad_vertex, texture_fragment, width, height);
     texture_pipeline.program.print_uniforms();
@@ -53,7 +52,8 @@ fn main() {
         quad_vertex,
         quad_fragment,
         &texture_pipeline.framebuffer.color_buffer,
-        width, height
+        width,
+        height,
     );
 
     let mut mode: u32 = 0;
@@ -62,9 +62,9 @@ fn main() {
         for (_, event) in glfw::flush_messages(&events) {
             handle_window_event(&mut window, event, &mut mode, &mut width, &mut height);
         }
-        quad_pipeline.width = width; 
-        quad_pipeline.height = height; 
-        
+        quad_pipeline.width = width;
+        quad_pipeline.height = height;
+
         texture_pipeline.bind();
         texture_pipeline.program.set_uniform("mode", &(mode as i32));
         texture_pipeline.program.set_uniform(
@@ -89,7 +89,13 @@ fn main() {
     }
 }
 
-fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, mode: &mut u32, cwidth: &mut u32, cheight: &mut u32,) {
+fn handle_window_event(
+    window: &mut glfw::Window,
+    event: glfw::WindowEvent,
+    mode: &mut u32,
+    cwidth: &mut u32,
+    cheight: &mut u32,
+) {
     match event {
         glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => window.set_should_close(true),
         glfw::WindowEvent::Key(Key::Space, _, Action::Press, _) => {
@@ -105,7 +111,7 @@ fn handle_window_event(window: &mut glfw::Window, event: glfw::WindowEvent, mode
             }
             *cwidth = width as u32;
             *cheight = height as u32;
-        },
+        }
         _ => {}
     }
 }
