@@ -46,7 +46,7 @@ fn main() {
     let texture_fragment =
         str::from_utf8(include_bytes!("../shaders/pointermap.frag")).unwrap();
 
-    let texture_pipeline = TexturePipeline::new(quad_vertex, texture_fragment, width, height);
+    let mut texture_pipeline = TexturePipeline::new(quad_vertex, texture_fragment, width, height);
     texture_pipeline.program.print_uniforms();
 
     let mut quad_pipeline = QuadPipeline::new(

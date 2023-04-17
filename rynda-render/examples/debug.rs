@@ -71,7 +71,7 @@ fn main() {
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug.vert")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug.frag")).unwrap();
 
-    let texture_pipeline = TexturePipeline::new(quad_vertex, compute_shader, width, height);
+    let mut texture_pipeline = TexturePipeline::new(quad_vertex, compute_shader, width, height);
     let mut quad_pipeline = QuadPipeline::new(
         vertex_shader,
         fragment_shader,

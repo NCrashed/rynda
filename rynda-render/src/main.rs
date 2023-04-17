@@ -1,14 +1,11 @@
 extern crate gl;
 extern crate glfw;
 
-use glam::{UVec3, Vec3};
-use glfw::{Action, Context, Key, CursorMode};
-use ndarray::Array3;
+use glam::Vec3;
+use glfw::{Action, Context, CursorMode, Key};
 use std::str;
 
-use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
-    buffer::texture::Texture,
     camera::Camera,
     debug::enable_gl_debug,
     pipeline::{generic::Pipeline, quad::QuadPipeline, vanish::VanishPipeline},
@@ -28,11 +25,11 @@ fn main() {
         )
         .expect("Failed to create GLFW window.");
 
-        window.set_key_polling(true);
-        window.set_framebuffer_size_polling(true);
-        window.set_cursor_pos_polling(true);
-        window.set_cursor_mode(CursorMode::Disabled);
-        window.make_current();
+    window.set_key_polling(true);
+    window.set_framebuffer_size_polling(true);
+    window.set_cursor_pos_polling(true);
+    window.set_cursor_mode(CursorMode::Disabled);
+    window.make_current();
 
     // Load the OpenGL function pointers3
     gl::load_with(|s| window.get_proc_address(s) as *const _);
@@ -59,12 +56,10 @@ fn main() {
     let mut camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
     let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad.vert")).unwrap();
-    let vanish_vertex = str::from_utf8(include_bytes!("../shaders/vanish_vertex.glsl")).unwrap();
+    let vanish_vertex = str::from_utf8(include_bytes!("../shaders/vanish.vert")).unwrap();
     let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad.frag")).unwrap();
-    let segment_fragment =
-        str::from_utf8(include_bytes!("../shaders/segment_fragment.glsl")).unwrap();
-    let vanish_fragment =
-        str::from_utf8(include_bytes!("../shaders/vanish_fragment.glsl")).unwrap();
+    let segment_fragment = str::from_utf8(include_bytes!("../shaders/segment.frag")).unwrap();
+    let vanish_fragment = str::from_utf8(include_bytes!("../shaders/vanish.frag")).unwrap();
 
     let mut vanish_pipeline = VanishPipeline::new(
         quad_vertex,
@@ -81,7 +76,7 @@ fn main() {
         quad_fragment,
         &vanish_pipeline.framebuffer.color_buffer,
         width,
-        height
+        height,
     );
 
     let (cx0, cy0) = window.get_cursor_pos();
@@ -98,7 +93,7 @@ fn main() {
         vanish_pipeline.camera = camera.clone();
         quad_pipeline.width = events_ctx.width;
         quad_pipeline.height = events_ctx.height;
-        
+
         vanish_pipeline.bind();
         // unsafe {
         //     // Clear the screen
@@ -147,7 +142,8 @@ impl EventContext {
             right: false,
             up: false,
             down: false,
-            width, height
+            width,
+            height,
         }
     }
 }
