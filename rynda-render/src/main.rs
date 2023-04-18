@@ -8,7 +8,11 @@ use std::str;
 use rynda_render::render::{
     camera::Camera,
     debug::enable_gl_debug,
-    pipeline::{generic::Pipeline, quad::QuadPipeline, vanish::VanishPipeline},
+    pipeline::{
+        generic::Pipeline,
+        quad::QuadPipeline,
+        vanish::{VanishPipeline, VanishPrograms},
+    },
 };
 
 fn main() {
@@ -20,7 +24,7 @@ fn main() {
         .create_window(
             width,
             height,
-            "Rynda texture target test",
+            "Rynda vanish point remap test",
             glfw::WindowMode::Windowed,
         )
         .expect("Failed to create GLFW window.");
@@ -35,41 +39,20 @@ fn main() {
     gl::load_with(|s| window.get_proc_address(s) as *const _);
     enable_gl_debug();
 
-    // let z = RgbVoxel::empty();
-    // let r = RgbVoxel::only_red(1);
-    // let voxels: Array3<RgbVoxel> = ndarray::arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
-
-    // let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((256, 256, 256), |(x, y, z)| {
-    //     let sx = (x as isize) - 128;
-    //     let sz = (z as isize) - 128;
-    //     let sy = (y as isize) - 256;
-    //     if sx * sx + sz * sz + sy * sy < 64 * 64 {
-    //         RgbVoxel::only_red(1)
-    //     } else {
-    //         RgbVoxel::empty()
-    //     }
-    // });
-
-    // let volume: RleVolume = voxels.into();
-    // let pointmap_texture = Texture::from_pointermap(gl::TEXTURE0, &volume);
-
     let mut camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
     let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad.vert")).unwrap();
     let vanish_vertex = str::from_utf8(include_bytes!("../shaders/vanish.vert")).unwrap();
     let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad.frag")).unwrap();
-    let segment_fragment = str::from_utf8(include_bytes!("../shaders/segment.frag")).unwrap();
+    let segment_compute = str::from_utf8(include_bytes!("../shaders/segment.comp")).unwrap();
     let vanish_fragment = str::from_utf8(include_bytes!("../shaders/vanish.frag")).unwrap();
 
-    let mut vanish_pipeline = VanishPipeline::new(
-        quad_vertex,
-        segment_fragment,
-        vanish_vertex,
-        vanish_fragment,
-        width,
-        height,
-        &camera,
-    );
+    let programs = VanishPrograms {
+        segment_compute_shader: segment_compute,
+        collect_vertex_shader: vanish_vertex,
+        collect_fragment_shader: vanish_fragment,
+    };
+    let mut vanish_pipeline = VanishPipeline::new(programs, (512, 512), (width, height), &camera);
 
     let mut quad_pipeline = QuadPipeline::new(
         quad_vertex,
@@ -94,23 +77,7 @@ fn main() {
         quad_pipeline.width = events_ctx.width;
         quad_pipeline.height = events_ctx.height;
 
-        vanish_pipeline.bind();
-        // unsafe {
-        //     // Clear the screen
-        //     gl::ClearColor(1.0, 1.0, 1.0, 1.0);
-        //     gl::Clear(gl::COLOR_BUFFER_BIT);
-        // }
-        // vanish_pipeline
-        //     .program
-        //     .set_uniform("mode", &(events_ctx.mode as i32));
-        // vanish_pipeline.program.set_uniform(
-        //     "volume_size",
-        //     &UVec3::new(volume.xsize, volume.ysize, volume.zsize),
-        // );
-        // pointmap_texture.bind(0);
-        // vanish_pipeline.program.set_uniform("pointermap", &0i32);
-        vanish_pipeline.draw();
-
+        vanish_pipeline.bind_draw();
         quad_pipeline.bind_draw();
 
         window.swap_buffers();

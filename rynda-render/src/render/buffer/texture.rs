@@ -32,7 +32,7 @@ impl Texture<{ TextureFormat::RGBA }> {
                 width as GLint,
                 height as GLint,
                 0,
-                gl::BGRA,
+                gl::RGBA,
                 gl::UNSIGNED_BYTE,
                 datum,
             );
@@ -56,10 +56,26 @@ impl<const FORMAT: TextureFormat> Texture<FORMAT> {
         }
     }
 
-    pub fn bind(&self, slot: i32) {
+    pub fn bind(&self, slot: u32) {
         unsafe {
-            gl::ActiveTexture(gl::TEXTURE0 + slot as u32);
+            gl::ActiveTexture(gl::TEXTURE0 + slot);
             gl::BindTexture(gl::TEXTURE_2D, self.id);
+        }
+    }
+
+    pub fn bind_mut(&self, slot: u32) {
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0 + slot);
+            gl::BindTexture(gl::TEXTURE_2D, self.id);
+            gl::BindImageTexture(
+                slot,
+                self.id as GLuint,
+                0,
+                gl::FALSE,
+                0,
+                gl::WRITE_ONLY,
+                gl::RGBA8,
+            );
         }
     }
 }

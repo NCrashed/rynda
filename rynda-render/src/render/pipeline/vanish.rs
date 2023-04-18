@@ -9,6 +9,7 @@ use crate::render::{
         frame::FrameBuffer,
         index::{IndexBuffer, PrimitiveType},
         texture::Texture,
+        texture::TextureFormat,
         vertex::VertexBuffer,
     },
     camera::Camera,
@@ -21,16 +22,13 @@ use crate::render::{
 /// Pipeline that renders first 4 framebuffers and blits them to resulting
 /// framebuffer according to vanish point of the camera.
 pub struct VanishPipeline {
-    pub framebuffer_top: FrameBuffer<()>,
-    pub framebuffer_bottom: FrameBuffer<()>,
-    pub framebuffer_left: FrameBuffer<()>,
-    pub framebuffer_right: FrameBuffer<()>,
+    pub texture_right: Texture<{ TextureFormat::RGBA }>,
+    pub texture_top: Texture<{ TextureFormat::RGBA }>,
+    pub texture_left: Texture<{ TextureFormat::RGBA }>,
+    pub texture_bottom: Texture<{ TextureFormat::RGBA }>,
     pub framebuffer: FrameBuffer<()>,
     pub segment_program: ShaderProgram,
     pub collect_program: ShaderProgram,
-    pub vao_quad: VertexArray,
-    pub vbo_quad: VertexBuffer<GLfloat>,
-    pub ebo_quad: IndexBuffer<GLshort>,
     pub vao_vanish: VertexArray,
     pub vbo_vanish: VertexBuffer<GLfloat>,
     pub sbo_vanish: VertexBuffer<GLfloat>,
@@ -117,43 +115,35 @@ fn vanish_mesh(vp: Vec2, aspect: f32) -> (Vec<GLfloat>, Vec<GLshort>, Vec<GLfloa
     (verts, ids, segments)
 }
 
-static QUAD_POSITION_DATA: [GLfloat; 8] = [-1.0, -1.0, -1.0, 1.0, 1.0, 1.0, 1.0, -1.0];
-static QUAD_INDEX_DATA: [GLshort; 4] = [1, 2, 0, 3];
+pub struct VanishPrograms<'a> {
+    pub segment_compute_shader: &'a str,
+    pub collect_vertex_shader: &'a str,
+    pub collect_fragment_shader: &'a str,
+} 
 
 impl VanishPipeline {
     pub fn new(
-        segment_vertex_shader: &str,
-        segment_fragment_shader: &str,
-        collect_vertex_shader: &str,
-        collect_fragment_shader: &str,
-        width: u32,
-        height: u32,
+        programs: VanishPrograms<'_>,
+        segment_dims: (u32, u32),
+        target_dims: (u32, u32),
         camera: &Camera,
     ) -> Self {
-        let vs = Shader::compile(ShaderType::Vertex, segment_vertex_shader);
-        let fs = Shader::compile(ShaderType::Fragment, segment_fragment_shader);
-        let segment_program = ShaderProgram::link(vec![vs, fs]);
+        let cs = Shader::compile(ShaderType::Compute, programs.segment_compute_shader);
+        let segment_program = ShaderProgram::link(vec![cs]);
 
-        let vs = Shader::compile(ShaderType::Vertex, collect_vertex_shader);
-        let fs = Shader::compile(ShaderType::Fragment, collect_fragment_shader);
+        let vs = Shader::compile(ShaderType::Vertex, programs.collect_vertex_shader);
+        let fs = Shader::compile(ShaderType::Fragment, programs.collect_fragment_shader);
         let collect_program = ShaderProgram::link(vec![vs, fs]);
 
-        let texture = Texture::new(gl::TEXTURE1, width, height, None);
-        let framebuffer_top = FrameBuffer::new(texture);
-        let texture = Texture::new(gl::TEXTURE2, width, height, None);
-        let framebuffer_bottom = FrameBuffer::new(texture);
-        let texture = Texture::new(gl::TEXTURE3, width, height, None);
-        let framebuffer_left = FrameBuffer::new(texture);
-        let texture = Texture::new(gl::TEXTURE4, width, height, None);
-        let framebuffer_right = FrameBuffer::new(texture);
+        let texture_top = Texture::new(gl::TEXTURE1, segment_dims.0, segment_dims.1, None);
+        let texture_bottom = Texture::new(gl::TEXTURE2, segment_dims.0, segment_dims.1, None);
+        let texture_left = Texture::new(gl::TEXTURE3, segment_dims.0, segment_dims.1, None);
+        let texture_right = Texture::new(gl::TEXTURE4, segment_dims.0, segment_dims.1, None);
 
+        let width = target_dims.0;
+        let height = target_dims.1;
         let texture = Texture::new(gl::TEXTURE5, width, height, None);
         let framebuffer = FrameBuffer::new(texture);
-
-        let vao_quad = VertexArray::new();
-        let vbo_quad: VertexBuffer<GLfloat> = VertexBuffer::new(&QUAD_POSITION_DATA);
-        let ebo_quad: IndexBuffer<GLshort> =
-            IndexBuffer::new(PrimitiveType::TriangleStrip, &QUAD_INDEX_DATA);
 
         let vp_screen = camera.vanishing_point_window(width, height);
         let vp = vp_screen / Vec2::new(width as f32, height as f32) * 2.0 - 1.0;
@@ -165,16 +155,13 @@ impl VanishPipeline {
             IndexBuffer::new(PrimitiveType::Triangles, &mesh_ids);
 
         VanishPipeline {
-            framebuffer_top,
-            framebuffer_bottom,
-            framebuffer_left,
-            framebuffer_right,
+            texture_top,
+            texture_bottom,
+            texture_left,
+            texture_right,
             framebuffer,
             segment_program,
             collect_program,
-            vao_quad,
-            vbo_quad,
-            ebo_quad,
             vao_vanish,
             vbo_vanish,
             sbo_vanish,
@@ -188,52 +175,58 @@ impl Pipeline for VanishPipeline {
     // Bind actually binds all for segment rendering, not the collecting phase
     fn bind(&mut self) {
         // Shared between all segments
-        self.vao_quad.bind();
-        self.vbo_quad.bind();
-        self.ebo_quad.bind();
         self.segment_program.use_program();
-        self.segment_program
-            .bind_attribute::<Vec2>("position", &self.vbo_quad);
 
         // Vanishing point of the camera defines which segments are visible
         let width = self.framebuffer.color_buffer.width;
         let height = self.framebuffer.color_buffer.height;
         let vp_screen = self.camera.vanishing_point_window(width, height);
 
-        unsafe {
-            gl::Viewport(0, 0, width as i32, height as i32);
-        }
+        let np = 10.0;
+        self.segment_program.set_uniform::<GLfloat>("np", &np);
 
         // First render all segments
         // Top segment
         if vp_screen.y > 0.0 {
             self.segment_program.set_uniform::<GLfloat>("segment", &0.0);
-            self.framebuffer_top.bind();
-            self.ebo_quad.draw();
+            self.texture_top.bind_mut(0);
+            unsafe {
+                gl::DispatchCompute(self.texture_top.width, 1, 1);
+            }
         }
         // Bottom segment
         if vp_screen.y < height as f32 {
             self.segment_program.set_uniform::<GLfloat>("segment", &1.0);
-            self.framebuffer_bottom.bind();
-            self.ebo_quad.draw();
+            self.texture_bottom.bind_mut(0);
+            unsafe {
+                gl::DispatchCompute(self.texture_bottom.width, 1, 1);
+            }
         }
         // Left segment
         if vp_screen.x > 0.0 {
             self.segment_program.set_uniform::<GLfloat>("segment", &2.0);
-            self.framebuffer_left.bind();
-            self.ebo_quad.draw();
+            self.texture_left.bind_mut(0);
+            unsafe {
+                gl::DispatchCompute(self.texture_left.width, 1, 1);
+            }
         }
         // Right segment
         if vp_screen.x < width as f32 {
             self.segment_program.set_uniform::<GLfloat>("segment", &3.0);
-            self.framebuffer_right.bind();
-            self.ebo_quad.draw();
+            self.texture_right.bind_mut(0);
+            unsafe {
+                gl::DispatchCompute(self.texture_right.width, 1, 1);
+            }
+        }
+        unsafe {
+            gl::MemoryBarrier(gl::SHADER_STORAGE_BARRIER_BIT);
         }
 
         // Bind resulting framebuffer
         self.vao_vanish.bind();
         self.ebo_vanish.bind();
-        let vp = vp_screen / Vec2::new(width as f32, height as f32) * 2.0 - 1.0;
+        let mut vp = vp_screen / Vec2::new(width as f32, height as f32) * 2.0 - 1.0;
+        vp.x = 0.0;
         let (mesh_vecs, mesh_ids, segments) = vanish_mesh(vp, self.camera.aspect);
         self.vbo_vanish.load(&mesh_vecs);
         self.ebo_vanish.load(&mesh_ids);
@@ -256,10 +249,10 @@ impl Pipeline for VanishPipeline {
         self.collect_program.set_uniform("MVP", &aspect_mvp);
 
         self.framebuffer.bind();
-        self.framebuffer_top.color_buffer.bind(0);
-        self.framebuffer_bottom.color_buffer.bind(1);
-        self.framebuffer_left.color_buffer.bind(2);
-        self.framebuffer_right.color_buffer.bind(3);
+        self.texture_top.bind(0);
+        self.texture_bottom.bind(1);
+        self.texture_left.bind(2);
+        self.texture_right.bind(3);
     }
 
     fn draw(&self) {

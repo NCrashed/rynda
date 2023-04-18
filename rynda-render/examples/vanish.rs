@@ -8,7 +8,11 @@ use std::str;
 use rynda_render::render::{
     camera::Camera,
     debug::enable_gl_debug,
-    pipeline::{generic::Pipeline, quad::QuadPipeline, vanish::VanishPipeline},
+    pipeline::{
+        generic::Pipeline,
+        quad::QuadPipeline,
+        vanish::{VanishPipeline, VanishPrograms},
+    },
 };
 
 fn main() {
@@ -20,7 +24,7 @@ fn main() {
         .create_window(
             width,
             height,
-            "Rynda texture target test",
+            "Rynda vanish point remap test",
             glfw::WindowMode::Windowed,
         )
         .expect("Failed to create GLFW window.");
@@ -40,18 +44,15 @@ fn main() {
     let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad.vert")).unwrap();
     let vanish_vertex = str::from_utf8(include_bytes!("../shaders/vanish.vert")).unwrap();
     let quad_fragment = str::from_utf8(include_bytes!("../shaders/quad.frag")).unwrap();
-    let segment_fragment = str::from_utf8(include_bytes!("../shaders/segment.frag")).unwrap();
+    let segment_compute = str::from_utf8(include_bytes!("../shaders/segment.comp")).unwrap();
     let vanish_fragment = str::from_utf8(include_bytes!("../shaders/vanish.frag")).unwrap();
 
-    let mut vanish_pipeline = VanishPipeline::new(
-        quad_vertex,
-        segment_fragment,
-        vanish_vertex,
-        vanish_fragment,
-        width,
-        height,
-        &camera,
-    );
+    let programs = VanishPrograms {
+        segment_compute_shader: segment_compute,
+        collect_vertex_shader: vanish_vertex,
+        collect_fragment_shader: vanish_fragment,
+    };
+    let mut vanish_pipeline = VanishPipeline::new(programs, (512, 512), (width, height), &camera);
 
     let mut quad_pipeline = QuadPipeline::new(
         quad_vertex,
