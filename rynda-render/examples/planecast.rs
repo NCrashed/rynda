@@ -72,7 +72,7 @@ fn main() {
     camera.far = 10.0;
     let mut debug_camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
-    let mut texture_pipeline = TexturePipeline::new(quad_vertex, compute_shader, width, height);
+    let mut texture_pipeline = TexturePipeline::new(quad_vertex, compute_shader, 64, 64);
     let mut planecast_pipelinne = PlanecastPipeline::new(
         planecast_shader,
         texture_pipeline.framebuffer.color_buffer.clone(),
@@ -122,6 +122,7 @@ fn main() {
         texture_pipeline.draw();
         texture_pipeline.unbind();
 
+        planecast_pipelinne.camera = active_camera.clone();
         planecast_pipelinne.bind_draw();
 
         quad_pipeline.bind();

@@ -51,6 +51,8 @@ impl Pipeline for PlanecastPipeline {
             .set_uniform::<GLfloat>("np", &(self.planes_number as f32));
         self.program
             .set_uniform::<GLfloat>("segment", &(self.segment as f32));
+        let mvp_inv = self.camera.matrix().inverse();
+        self.program.set_uniform("mvp_inv", &mvp_inv);
     }
 
     fn draw(&self) {

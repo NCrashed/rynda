@@ -4,8 +4,31 @@ layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 uniform vec2 vp;
 uniform float np;
 uniform float segment;
+uniform mat4 mvp_inv;
 
 layout (rgba8, binding = 0) uniform image2D img_output;
+
+/// Project render space vector to world XZ plane 
+vec2 projectXZ(vec2 v) {
+    vec4 pv = vec4(v.x, v.y, 0, 1.0) * mvp_inv;
+    return pv.xy / pv.w;
+}
+
+/// Intersect 2D lines defined by 2 points
+vec2 intesect2d(vec2 p1, vec2 p2, vec2 p3, vec2 p4) {
+    float dx1 = p1.x - p2.x;
+    float dx2 = p3.x - p4.x;
+    float dy1 = p1.y - p2.y;
+    float dy2 = p3.y - p4.y;
+    float dt = dx1 * dy2 - dy1 * dx2; // if zero never cross
+    
+    float a = p1.x * p2.y - p1.y * p2.x;
+    float b = p3.x * p4.y - p3.y * p4.x;
+    float px = a * dx2 - dx1 * b;
+    float py = a * dy2 - dy1 * b;
+
+    return vec2(px / dt, py / dt);
+}
 
 void main() {
     uint line_i = uint(gl_GlobalInvocationID.x);
@@ -14,6 +37,7 @@ void main() {
     vec4 diff_color;
     int line_start = int(float(line_i * size.y) / np);
     uint line_width = uint(float(size.y) / np);
+    float plane_offset = float(line_i) * 2 / np - 1.0;
 
     if (segment < 1.0) {
         base_color = vec4(0.4 + vp.x * 0.1, 0.0, 0.0, 1.0);
@@ -29,14 +53,24 @@ void main() {
         diff_color = vec4(0.6, 0.0, 0.6, 1.0);    
     }
 
-    for(int j=0; j<=line_width; ++j) {
-        for(int i=0; i<=uint(size.x); ++i) {
-            ivec2 pixel_coord = ivec2(int(i), line_start + int(j));
-            if ((i / 40) % 2 == 0) {
-                imageStore(img_output, pixel_coord, base_color);
-            } else {
-                // imageStore(img_output, pixel_coord, diff_color);
-            }
-        }
+    vec2 p1 = projectXZ(vp);
+    vec2 p2 = projectXZ(vec2(plane_offset, 1.0));
+    // p1 = vec2(0.0, 0.0);
+    // p2 = vec2(0.0, 1.0);
+    vec2 cross_up = intesect2d(vec2(-1.0, 1.0), vec2(1.0, 1.0), p1, p2);
+    if (cross_up.x > -1.0 && cross_up.x < 1.0) {
+        ivec2 pixel_coord = ivec2(int((cross_up.x + 1.0) * float(size.x) * 0.5), 0);
+        imageStore(img_output, pixel_coord, vec4(1.0, 0.0, 0.0, 1.0));
     }
+
+    // for(int j=0; j<=line_width; ++j) {
+    //     for(int i=0; i<=uint(size.x); ++i) {
+    //         ivec2 pixel_coord = ivec2(int(i), line_start + int(j));
+    //         if ((i / 40) % 2 == 0) {
+    //             imageStore(img_output, pixel_coord, base_color);
+    //         } else {
+    //             //imageStore(img_output, pixel_coord, diff_color);
+    //         }
+    //     }
+    // }
 }
