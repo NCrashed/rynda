@@ -65,7 +65,7 @@ fn main() {
     let mut quad_pipeline = QuadPipeline::new(
         quad_vertex,
         quad_fragment,
-        &texture_pipeline.framebuffer.color_buffer,
+        texture_pipeline.framebuffer.color_buffer.clone(),
         width,
         height,
     );

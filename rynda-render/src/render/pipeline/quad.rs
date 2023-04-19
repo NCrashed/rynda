@@ -1,6 +1,6 @@
 use gl::types::*;
 use glam::Vec2;
-use std::str;
+use std::{rc::Rc, str};
 
 use super::generic::Pipeline;
 use crate::render::{
@@ -20,7 +20,7 @@ use crate::render::{
 pub struct QuadPipeline {
     pub program: ShaderProgram,
     pub vao: VertexArray,
-    pub texture: GLuint,
+    pub texture: Rc<Texture<{ TextureFormat::RGBA }>>,
     pub vbo: VertexBuffer<GLfloat>,
     pub ebo: IndexBuffer<GLshort>,
     pub width: u32,
@@ -34,7 +34,7 @@ impl QuadPipeline {
     pub fn new(
         vertex_shader: &str,
         fragment_shader: &str,
-        texture: &Texture<{ TextureFormat::RGBA }>,
+        texture: Rc<Texture<{ TextureFormat::RGBA }>>,
         width: u32,
         height: u32,
     ) -> Self {
@@ -50,7 +50,7 @@ impl QuadPipeline {
         QuadPipeline {
             program,
             vao,
-            texture: texture.id,
+            texture,
             vbo,
             ebo,
             width,
@@ -71,7 +71,7 @@ impl Pipeline for QuadPipeline {
         unsafe {
             // Bind output texture in Texture Unit 1
             gl::ActiveTexture(gl::TEXTURE1);
-            gl::BindTexture(gl::TEXTURE_2D, self.texture);
+            gl::BindTexture(gl::TEXTURE_2D, self.texture.id);
 
             // Set our "texture" sampler to use Texture Unit 1
             let tex_id = self.program.uniform_location("img_output");

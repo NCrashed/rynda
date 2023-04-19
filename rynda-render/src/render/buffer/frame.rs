@@ -1,5 +1,6 @@
 use gl::types::*;
 use std::marker::PhantomData;
+use std::rc::Rc;
 
 use super::depth::DepthBuffer;
 use super::texture::{Texture, TextureFormat};
@@ -13,7 +14,7 @@ pub struct FrameBuffer<T> {
     /// Depth buffer attached
     pub depth_buffer: DepthBuffer<T>,
     /// Binded color texture
-    pub color_buffer: Texture<{ TextureFormat::RGBA }>,
+    pub color_buffer: Rc<Texture<{ TextureFormat::RGBA }>>,
 }
 
 impl<T> FrameBuffer<T> {
@@ -51,7 +52,7 @@ impl<T> FrameBuffer<T> {
             phantom: PhantomData,
             id,
             depth_buffer,
-            color_buffer,
+            color_buffer: Rc::new(color_buffer),
         }
     }
 

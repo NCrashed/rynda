@@ -119,7 +119,7 @@ pub struct VanishPrograms<'a> {
     pub segment_compute_shader: &'a str,
     pub collect_vertex_shader: &'a str,
     pub collect_fragment_shader: &'a str,
-} 
+}
 
 impl VanishPipeline {
     pub fn new(

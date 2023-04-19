@@ -14,6 +14,7 @@ use rynda_render::render::{
     pipeline::{
         debug::{DebugLine, DebugPipeline},
         generic::Pipeline,
+        planecast::PlanecastPipeline,
         quad::QuadPipeline,
         texture::TexturePipeline,
     },
@@ -30,7 +31,7 @@ fn main() {
         .create_window(
             width,
             height,
-            "Rynda debug boundaries test",
+            "Rynda debug of planes casting in pointermap",
             glfw::WindowMode::Windowed,
         )
         .expect("Failed to create GLFW window.");
@@ -45,10 +46,6 @@ fn main() {
     gl::load_with(|s| window.get_proc_address(s) as *const _);
     enable_gl_debug();
 
-    // let z = RgbVoxel::empty();
-    // let r = RgbVoxel::only_red(1);
-    // let voxels: Array3<RgbVoxel> = arr3(&[[[z, r], [z, r]], [[z, z], [z, z]]]);
-    // let voxels = rynda_format::from_vox::vox_to_rle_volume("assets/test_model.vox").unwrap();
     let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((32, 32, 32), |(x, y, z)| {
         let sx = (x as isize) - 16;
         let sz = (z as isize) - 16;
@@ -68,8 +65,19 @@ fn main() {
     let compute_shader = str::from_utf8(include_bytes!("../shaders/pointermap.frag")).unwrap();
     let debug_vertex = str::from_utf8(include_bytes!("../shaders/debug.vert")).unwrap();
     let debug_fragment = str::from_utf8(include_bytes!("../shaders/debug.frag")).unwrap();
+    let planecast_shader = str::from_utf8(include_bytes!("../shaders/planecast.comp")).unwrap();
+
+    let mut camera = Camera::look_at(Vec3::new(0.0, 2.0, -5.0), Vec3::ZERO);
+    camera.near = 1.0;
+    camera.far = 10.0;
+    let mut debug_camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
     let mut texture_pipeline = TexturePipeline::new(quad_vertex, compute_shader, width, height);
+    let mut planecast_pipelinne = PlanecastPipeline::new(
+        planecast_shader,
+        texture_pipeline.framebuffer.color_buffer.clone(),
+        &camera,
+    );
     let mut quad_pipeline = QuadPipeline::new(
         vertex_shader,
         fragment_shader,
@@ -78,11 +86,6 @@ fn main() {
         height,
     );
     let mut debug_pipeline = DebugPipeline::new(debug_vertex, debug_fragment);
-
-    let mut camera = Camera::look_at(Vec3::new(0.0, 2.0, -5.0), Vec3::ZERO);
-    camera.near = 1.0;
-    camera.far = 10.0;
-    let mut debug_camera = Camera::look_at(Vec3::new(-5.5, 0.0, -5.0), Vec3::ZERO);
 
     let (cx0, cy0) = window.get_cursor_pos();
     let mut events_ctx = EventContext::new(cx0, cy0, width, height);
@@ -118,6 +121,8 @@ fn main() {
         texture_pipeline.program.set_uniform("pointermap", &0i32);
         texture_pipeline.draw();
         texture_pipeline.unbind();
+
+        planecast_pipelinne.bind_draw();
 
         quad_pipeline.bind();
         unsafe {

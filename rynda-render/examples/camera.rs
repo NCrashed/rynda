@@ -68,7 +68,7 @@ fn main() {
     let mut quad_pipeline = QuadPipeline::new(
         quad_mvp_vertex,
         quad_fragment,
-        &texture_pipeline.framebuffer.color_buffer,
+        texture_pipeline.framebuffer.color_buffer.clone(),
         width,
         height,
     );
@@ -121,7 +121,7 @@ fn main() {
 }
 
 const MOUSE_ROTATION_SPEED: f64 = 0.001;
-const CAMERA_MOVE_SPEED: f64 = 0.1;
+const CAMERA_MOVE_SPEED: f64 = 0.01;
 
 struct EventContext {
     pub mode: u32,

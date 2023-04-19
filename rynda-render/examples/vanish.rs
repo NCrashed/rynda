@@ -57,7 +57,7 @@ fn main() {
     let mut quad_pipeline = QuadPipeline::new(
         quad_vertex,
         quad_fragment,
-        &vanish_pipeline.framebuffer.color_buffer,
+        vanish_pipeline.framebuffer.color_buffer.clone(),
         width,
         height,
     );

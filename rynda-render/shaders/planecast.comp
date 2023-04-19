@@ -1,0 +1,42 @@
+#version 440
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+uniform vec2 vp;
+uniform float np;
+uniform float segment;
+
+layout (rgba8, binding = 0) uniform image2D img_output;
+
+void main() {
+    uint line_i = uint(gl_GlobalInvocationID.x);
+    ivec2 size = imageSize(img_output);
+    vec4 base_color; 
+    vec4 diff_color;
+    int line_start = int(float(line_i * size.y) / np);
+    uint line_width = uint(float(size.y) / np);
+
+    if (segment < 1.0) {
+        base_color = vec4(0.4 + vp.x * 0.1, 0.0, 0.0, 1.0);
+        diff_color = vec4(0.6, 0.0, 0.0, 1.0);
+    } else if (segment < 2.0) {
+        base_color = vec4(0.0, 0.4, 0.0, 1.0);
+        diff_color = vec4(0.0, 0.6, 0.0, 1.0);
+    } else if (segment < 3.0) {
+        base_color = vec4(0.0, 0.0, 0.4, 1.0);
+        diff_color = vec4(0.0, 0.0, 0.6, 1.0);
+    } else {
+        base_color = vec4(0.4, 0.0, 0.4, 1.0);
+        diff_color = vec4(0.6, 0.0, 0.6, 1.0);    
+    }
+
+    for(int j=0; j<=line_width; ++j) {
+        for(int i=0; i<=uint(size.x); ++i) {
+            ivec2 pixel_coord = ivec2(int(i), line_start + int(j));
+            if ((i / 40) % 2 == 0) {
+                imageStore(img_output, pixel_coord, base_color);
+            } else {
+                // imageStore(img_output, pixel_coord, diff_color);
+            }
+        }
+    }
+}
