@@ -46,12 +46,15 @@ impl Pipeline for PlanecastPipeline {
         self.texture.bind_mut(0);
 
         let vp_screen = self.camera.vanishing_point_screenspace();
+        let vp_world = self.camera.vanishing_point();
         self.program.set_uniform("vp", &vp_screen);
         self.program
             .set_uniform::<GLfloat>("np", &(self.planes_number as f32));
         self.program
             .set_uniform::<GLfloat>("segment", &(self.segment as f32));
         let mvp_inv = self.camera.matrix().inverse();
+        // let vp_rev_project = mvp_inv.project_point3(vp_screen.extend(0.0));
+        // println!("{vp_world} vs {vp_rev_project}");
         self.program.set_uniform("mvp_inv", &mvp_inv);
     }
 

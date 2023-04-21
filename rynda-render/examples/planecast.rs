@@ -25,8 +25,8 @@ use glam::{Mat4, Vec3};
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::Resizable(false));
-    let width = 1024;
-    let height = 1024;
+    let width = 700;
+    let height = 700;
     let (mut window, events) = glfw
         .create_window(
             width,
