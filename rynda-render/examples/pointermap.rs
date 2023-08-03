@@ -8,7 +8,7 @@ use std::str;
 
 use rynda_format::types::{volume::RleVolume, voxel::RgbVoxel};
 use rynda_render::render::{
-    buffer::texture::Texture,
+    buffer::{texture::Texture, shader::ShaderBuffer},
     debug::enable_gl_debug,
     pipeline::{generic::Pipeline, quad::QuadPipeline, texture::TexturePipeline},
 };
@@ -52,6 +52,7 @@ fn main() {
 
     let volume: RleVolume = voxels.into();
     let pointmap_texture = Texture::from_pointermap(gl::TEXTURE0, &volume);
+    let pointmap_buffer = ShaderBuffer::from_pointermap(&volume);
 
     let quad_vertex = str::from_utf8(include_bytes!("../shaders/quad.vert")).unwrap();
     let quad_vertex_transform =
@@ -96,6 +97,7 @@ fn main() {
             &UVec3::new(volume.xsize, volume.ysize, volume.zsize),
         );
         texture_pipeline.program.set_uniform("MVP", &aspect_mvp);
+        pointmap_buffer.bind(1);
         pointmap_texture.bind(0);
 
         texture_pipeline.program.set_uniform("pointermap", &0i32);

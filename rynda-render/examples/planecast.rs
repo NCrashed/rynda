@@ -46,11 +46,13 @@ fn main() {
     gl::load_with(|s| window.get_proc_address(s) as *const _);
     enable_gl_debug();
 
-    let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((32, 32, 32), |(x, y, z)| {
-        let sx = (x as isize) - 16;
-        let sz = (z as isize) - 16;
-        let sy = (y as isize) - 32;
-        if sx * sx + sz * sz + sy * sy < 16 * 16 {
+    let size = 12 as usize;
+    let sizeh = size as isize / 2;
+    let voxels: Array3<RgbVoxel> = Array3::from_shape_fn((size, size, size), |(x, y, z)| {
+        let sx = (x as isize) - sizeh;
+        let sz = (z as isize) - sizeh;
+        let sy = (y as isize) - size as isize;
+        if sx * sx + sz * sz + sy * sy < sizeh * sizeh {
             RgbVoxel::only_red(1)
         } else {
             RgbVoxel::empty()
@@ -123,7 +125,12 @@ fn main() {
         texture_pipeline.unbind();
 
         planecast_pipelinne.camera = active_camera.clone();
-        planecast_pipelinne.bind_draw();
+        planecast_pipelinne.bind();
+        planecast_pipelinne.program.set_uniform(
+            "volume_size",
+            &UVec3::new(volume.xsize, volume.ysize, volume.zsize),
+        );
+        planecast_pipelinne.draw();
 
         quad_pipeline.bind();
         unsafe {
