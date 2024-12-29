@@ -4,7 +4,7 @@ stdenv.mkDerivation rec {
   name = "finalfusion-utils-env";
   env = buildEnv { name = name; paths = buildInputs; };
 
-  nativeBuildInputs = [ pkgconfig ];
+  nativeBuildInputs = [ pkg-config ];
   buildInputs = [
     glslang
     rustup
